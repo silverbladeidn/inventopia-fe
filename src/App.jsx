@@ -15,6 +15,7 @@ import ChangePassword from './pages/CRUD/User/UpdatePassword';
 import StockNote from './pages/StockNote';
 import RequestNote from './pages/RequestNote';
 import Users from './pages/User';
+import EmailChange from './pages/EmailChange';
 import Settings from './pages/Settings';
 
 function App() {
@@ -37,6 +38,7 @@ function App() {
         <Route path="/users/add" element={<Layout><AddUser /></Layout>} />
         <Route path="/users/edit/:id" element={<Layout><EditUser /></Layout>} />
         <Route path="/users/changepass/:id" element={<Layout><ChangePassword /></Layout>} />
+        <Route path="/emailchange" element={<Layout><EmailChange /></Layout>} />
       </Routes>
     </Router>
   );

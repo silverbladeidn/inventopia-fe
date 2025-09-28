@@ -170,7 +170,7 @@ const AddInventory = () => {
                 <div className="mb-8">
                     <Link
                         to="/inventory"
-                        className="flex items-center text-gray-600 hover:text-gray-800 mb-4 transition-colors"
+                        className="inline-flex items-center text-gray-600 rounded-lg px-3 py-1 hover:bg-green-400 hover:text-black mb-4 transition-colors"
                     >
                         <ArrowLeft className="w-4 h-4 mr-2" />
                         Kembali ke Inventori
@@ -178,13 +178,13 @@ const AddInventory = () => {
 
                     <div className="flex items-center">
                         <div className="flex-shrink-0">
-                            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-600 rounded-xl flex items-center justify-center">
+                            <div className="w-12 h-12 bg-green-600 rounded-xl flex items-center justify-center">
                                 <Package className="w-6 h-6 text-white" />
                             </div>
                         </div>
                         <div className="ml-4">
-                            <h1 className="text-3xl font-bold text-gray-900">Tambah Produk Baru</h1>
-                            <p className="text-gray-600 mt-1">Isi detail untuk menambahkan produk baru ke inventori</p>
+                            <h1 className="text-3xl font-bold text-gray-900">Tambah Barang Baru</h1>
+                            <p className="text-gray-600 mt-1">Isi detail untuk menambahkan barang baru ke inventori</p>
                         </div>
                     </div>
                 </div>
@@ -219,9 +219,9 @@ const AddInventory = () => {
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                                 {/* Left Column - Product Image */}
                                 <div className="lg:col-span-1">
-                                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Gambar Produk</h3>
+                                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Gambar Barang</h3>
 
-                                    <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-purple-400 transition-colors">
+                                    <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-green-400 transition-colors">
                                         {imagePreview ? (
                                             <div className="relative">
                                                 <img
@@ -240,7 +240,7 @@ const AddInventory = () => {
                                         ) : (
                                             <div>
                                                 <Image className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                                                <p className="text-gray-500 mb-2">Upload gambar produk</p>
+                                                <p className="text-gray-500 mb-2">Upload gambar barang</p>
                                                 <p className="text-xs text-gray-400">PNG, JPG, JPEG, GIF, WebP maksimal 10MB</p>
                                             </div>
                                         )}
@@ -254,7 +254,7 @@ const AddInventory = () => {
                                         />
                                         <label
                                             htmlFor="image-upload"
-                                            className="mt-4 inline-flex items-center px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 cursor-pointer transition-colors"
+                                            className="mt-4 inline-flex items-center px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-200 hover:text-black cursor-pointer transition-colors"
                                         >
                                             <Upload className="w-4 h-4 mr-2" />
                                             {imagePreview ? 'Ganti Gambar' : 'Pilih Gambar'}
@@ -264,22 +264,22 @@ const AddInventory = () => {
 
                                 {/* Right Column - Product Details */}
                                 <div className="lg:col-span-2 space-y-6">
-                                    <h3 className="text-lg font-semibold text-gray-900">Detail Produk</h3>
+                                    <h3 className="text-lg font-semibold text-gray-900">Detail Barang</h3>
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         {/* Product Name */}
                                         <div className="md:col-span-2">
                                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Nama Produk *
+                                                Nama Barang *
                                             </label>
                                             <input
                                                 type="text"
                                                 name="name"
                                                 value={formData.name}
                                                 onChange={handleInputChange}
-                                                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors ${errors.name ? 'border-red-500' : 'border-gray-300'
+                                                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors ${errors.name ? 'border-red-500' : 'border-gray-300'
                                                     }`}
-                                                placeholder="Masukkan nama produk"
+                                                placeholder="Masukkan nama barang"
                                             />
                                             {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
                                         </div>
@@ -294,7 +294,7 @@ const AddInventory = () => {
                                                 value={formData.category_id}
                                                 onChange={handleInputChange}
                                                 disabled={loadingCategories}
-                                                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors ${errors.category_id ? 'border-red-500' : 'border-gray-300'
+                                                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors ${errors.category_id ? 'border-red-500' : 'border-gray-300'
                                                     } ${loadingCategories ? 'bg-gray-100' : ''}`}
                                             >
                                                 <option value="">
@@ -320,7 +320,7 @@ const AddInventory = () => {
                                                 name="sku"
                                                 value={formData.sku}
                                                 onChange={handleInputChange}
-                                                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors ${errors.sku ? 'border-red-500' : 'border-gray-300'
+                                                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors ${errors.sku ? 'border-red-500' : 'border-gray-300'
                                                     }`}
                                                 placeholder="Masukkan SKU"
                                             />
@@ -337,7 +337,7 @@ const AddInventory = () => {
                                                 name="stock_quantity"
                                                 value={formData.stock_quantity}
                                                 onChange={handleInputChange}
-                                                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors ${errors.stock_quantity ? 'border-red-500' : 'border-gray-300'
+                                                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors ${errors.stock_quantity ? 'border-red-500' : 'border-gray-300'
                                                     }`}
                                                 placeholder="Masukkan jumlah"
                                                 min="0"
@@ -355,7 +355,7 @@ const AddInventory = () => {
                                                 name="price"
                                                 value={formData.price}
                                                 onChange={handleInputChange}
-                                                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors ${errors.price ? 'border-red-500' : 'border-gray-300'
+                                                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors ${errors.price ? 'border-red-500' : 'border-gray-300'
                                                     }`}
                                                 placeholder="Masukkan harga jual"
                                                 min="0"
@@ -374,7 +374,7 @@ const AddInventory = () => {
                                                 name="cost_price"
                                                 value={formData.cost_price}
                                                 onChange={handleInputChange}
-                                                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors ${errors.cost_price ? 'border-red-500' : 'border-gray-300'
+                                                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors ${errors.cost_price ? 'border-red-500' : 'border-gray-300'
                                                     }`}
                                                 placeholder="Masukkan harga modal"
                                                 min="0"
@@ -393,7 +393,7 @@ const AddInventory = () => {
                                                 name="min_stock_level"
                                                 value={formData.min_stock_level}
                                                 onChange={handleInputChange}
-                                                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors"
+                                                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
                                                 placeholder="Masukkan stok minimum"
                                                 min="0"
                                             />
@@ -409,7 +409,7 @@ const AddInventory = () => {
                                                 name="max_stock_level"
                                                 value={formData.max_stock_level}
                                                 onChange={handleInputChange}
-                                                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors"
+                                                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
                                                 placeholder="Masukkan stok maksimum"
                                                 min="0"
                                             />
@@ -425,8 +425,8 @@ const AddInventory = () => {
                                                 value={formData.description}
                                                 onChange={handleInputChange}
                                                 rows={4}
-                                                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors"
-                                                placeholder="Masukkan deskripsi produk..."
+                                                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
+                                                placeholder="Masukkan deskripsi barang..."
                                             />
                                         </div>
                                     </div>
@@ -447,7 +447,7 @@ const AddInventory = () => {
                             <button
                                 type="submit"
                                 disabled={submitting}
-                                className="px-6 py-3 bg-gradient-to-r from-green-600 to-lime-400 text-white rounded-xl hover:shadow-lg transition-all duration-200 transform hover:scale-105 font-medium flex items-center disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                                className="px-6 py-3 bg-green-600 text-white rounded-xl hover:shadow-lg transition-all duration-200 transform hover:scale-105 font-medium flex items-center disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                             >
                                 {submitting ? (
                                     <>
@@ -457,7 +457,7 @@ const AddInventory = () => {
                                 ) : (
                                     <>
                                         <Save className="w-4 h-4 mr-2" />
-                                        Tambah Produk
+                                        Tambah Barang
                                     </>
                                 )}
                             </button>

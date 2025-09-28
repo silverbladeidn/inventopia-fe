@@ -162,7 +162,7 @@ const UpdatePassword = () => {
                 <div className="mb-8">
                     <Link
                         to="/users"
-                        className="flex items-center text-gray-600 hover:text-gray-800 mb-4 transition-colors"
+                        className="inline-flex items-center text-gray-600 rounded-lg px-3 py-1 hover:bg-green-400 hover:text-black mb-4 transition-colors"
                     >
                         <ArrowLeft className="w-4 h-4 mr-2" />
                         Kembali ke Pengguna
@@ -303,7 +303,7 @@ const UpdatePassword = () => {
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="px-6 py-3 bg-gradient-to-r from-green-600 to-lime-400 text-white rounded-xl hover:shadow-lg transition-all duration-200 transform hover:scale-105 font-medium flex items-center disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                                className="px-6 py-3 bg-green-600 text-white rounded-xl hover:shadow-lg transition-all duration-200 transform hover:scale-105 font-medium flex items-center disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                             >
                                 {loading ? (
                                     <>

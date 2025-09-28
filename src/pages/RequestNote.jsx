@@ -8,6 +8,7 @@ import {
     Plus,
     Filter,
     FileSpreadsheet,
+    HandHelping,
     File,
     Search,
     Package,
@@ -18,52 +19,94 @@ import {
     X,
     TrendingUp,
     TrendingDown,
-    RotateCcw
+    RotateCcw,
+    Eye,
+    XCircle,
+    Clock,
+    User
 } from 'lucide-react';
 
-const StockNote = () => {
+const RequestNote = () => {
     const [searchQuery, setSearchQuery] = useState('');
-    const [filterType, setFilterType] = useState('all');
-    const [stockNotes, setStockNotes] = useState([]);
+    const [filterStatus, setFilterStatus] = useState('all');
+    const [requests, setRequests] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
 
     // Sorting state
-    const [sortField, setSortField] = useState('id');
-    const [sortDirection, setSortDirection] = useState('asc');
+    const [sortField, setSortField] = useState('created_at');
+    const [sortDirection, setSortDirection] = useState('desc');
 
     // Advanced filters
     const [advancedFilters, setAdvancedFilters] = useState({
-        productId: '',
-        quantityMin: '',
-        quantityMax: '',
+        userId: '',
         startDate: '',
         endDate: ''
     });
 
-    // Fungsi untuk mengambil data stock movements dari API
-    const fetchStockNotes = async () => {
+    // Modal state for viewing request details
+    const [selectedRequest, setSelectedRequest] = useState(null);
+    const [showDetailModal, setShowDetailModal] = useState(false);
+
+    // Fungsi untuk mengambil data item requests dari API
+    const fetchRequests = async (page = 1) => {
         try {
             setLoading(true);
-            const response = await axios.get('http://127.0.0.1:8000/api/stockmovement');
-            console.log("API result:", response.data);
 
-            // Ambil array stock movements
-            setStockNotes(response.data.data.data || response.data.data);
-            setError(null);
+            const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+
+            if (!token) {
+                setError('Token tidak ditemukan. Silakan login terlebih dahulu.');
+                return;
+            }
+
+            const params = new URLSearchParams({
+                page: page.toString()
+            });
+
+            if (filterStatus !== 'all') {
+                params.append('status', filterStatus);
+            }
+
+            if (searchQuery.trim()) {
+                params.append('search', searchQuery.trim());
+            }
+
+            const response = await axios.get(`http://127.0.0.1:8000/api/item-requests?${params}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/json'
+                }
+            });
+
+            if (response.data.success) {
+                const data = response.data.data;
+                setRequests(data.data || []);
+                setCurrentPage(data.current_page || 1);
+                setTotalPages(data.last_page || 1);
+                setError(null);
+            } else {
+                setError('Gagal mengambil data requests');
+            }
         } catch (err) {
-            setError('Gagal mengambil data stock movements');
-            console.error('Error fetching stock movements:', err);
+            console.error('Error fetching requests:', err);
+            if (err.response?.status === 401) {
+                setError('Sesi login telah berakhir. Silakan login kembali.');
+            } else {
+                setError('Gagal mengambil data requests');
+            }
         } finally {
             setLoading(false);
         }
     };
 
-    // Panggil fetchStockNotes saat komponen dimount
+    // Panggil fetchRequests saat komponen dimount atau filter berubah
     useEffect(() => {
-        fetchStockNotes();
-    }, []);
+        fetchRequests(1);
+    }, [filterStatus, searchQuery]);
 
     // Sorting function
     const handleSort = (field) => {
@@ -81,25 +124,17 @@ const StockNote = () => {
             let aValue, bValue;
 
             switch (sortField) {
-                case 'product_name':
-                    aValue = a.product?.name?.toLowerCase() || '';
-                    bValue = b.product?.name?.toLowerCase() || '';
+                case 'request_number':
+                    aValue = a.request_number;
+                    bValue = b.request_number;
                     break;
-                case 'type':
-                    aValue = a.type;
-                    bValue = b.type;
+                case 'status':
+                    aValue = a.status;
+                    bValue = b.status;
                     break;
-                case 'quantity':
-                    aValue = a.quantity;
-                    bValue = b.quantity;
-                    break;
-                case 'previous_stock':
-                    aValue = a.previous_stock;
-                    bValue = b.previous_stock;
-                    break;
-                case 'current_stock':
-                    aValue = a.current_stock;
-                    bValue = b.current_stock;
+                case 'items_count':
+                    aValue = a.details?.length || 0;
+                    bValue = b.details?.length || 0;
                     break;
                 case 'created_at':
                     aValue = new Date(a.created_at);
@@ -122,22 +157,20 @@ const StockNote = () => {
     const exportToExcel = async () => {
         try {
             const workbook = new ExcelJS.Workbook();
-            const worksheet = workbook.addWorksheet('Catatan Stok');
+            const worksheet = workbook.addWorksheet('Riwayat Permintaan');
 
             // Add headers
-            const headers = ['ID', 'Nama Produk', 'SKU', 'Tipe', 'Kuantitas', 'Jumlah Stok Sebelum', 'Jumlah Stok Sesudah', 'Catatan', 'Tanggal'];
+            const headers = ['Request Number', 'User', 'Status', 'Total Items', 'Note', 'Created At'];
             worksheet.addRow(headers);
 
             // Add data
             filteredItems.forEach(item => {
                 worksheet.addRow([
-                    item.id,
-                    item.product?.name || 'Unknown Product',
-                    item.type,
-                    item.quantity,
-                    item.previous_stock,
-                    item.current_stock,
-                    item.reference || '-',
+                    item.request_number,
+                    item.user?.name || 'Unknown User',
+                    item.status,
+                    item.details?.length || 0,
+                    item.note || '-',
                     new Date(item.created_at).toLocaleDateString()
                 ]);
             });
@@ -151,7 +184,7 @@ const StockNote = () => {
             const link = document.createElement('a');
             const url = URL.createObjectURL(blob);
             link.setAttribute('href', url);
-            link.setAttribute('download', `stock_movements_${new Date().toISOString().slice(0, 10)}.xlsx`);
+            link.setAttribute('download', `item_requests_${new Date().toISOString().slice(0, 10)}.xlsx`);
             link.style.visibility = 'hidden';
             document.body.appendChild(link);
             link.click();
@@ -171,7 +204,7 @@ const StockNote = () => {
             // Title
             doc.setFontSize(18);
             doc.setFont('helvetica', 'bold');
-            doc.text('Stock Movement Report', 14, 20);
+            doc.text('Item Request Report', 14, 20);
 
             // Date
             doc.setFontSize(10);
@@ -179,14 +212,12 @@ const StockNote = () => {
             doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 30);
 
             // Table data
-            const tableColumns = ['ID', 'Product', 'Type', 'Qty', 'Prev Stock', 'Current Stock', 'Date'];
+            const tableColumns = ['Request Number', 'User', 'Status', 'Items', 'Created At'];
             const tableRows = filteredItems.map(item => [
-                item.id,
-                item.product?.name || 'Unknown',
-                item.type,
-                item.quantity,
-                item.previous_stock,
-                item.current_stock,
+                item.request_number,
+                item.user?.name || 'Unknown',
+                item.status,
+                item.details?.length || 0,
                 new Date(item.created_at).toLocaleDateString()
             ]);
 
@@ -206,19 +237,10 @@ const StockNote = () => {
                 },
                 alternateRowStyles: {
                     fillColor: [245, 245, 245]
-                },
-                columnStyles: {
-                    0: { cellWidth: 15 },
-                    1: { cellWidth: 35 },
-                    2: { cellWidth: 20 },
-                    3: { cellWidth: 15 },
-                    4: { cellWidth: 20 },
-                    5: { cellWidth: 20 },
-                    6: { cellWidth: 25 }
                 }
             });
 
-            doc.save(`stock_movements_${new Date().toISOString().slice(0, 10)}.pdf`);
+            doc.save(`item_requests_${new Date().toISOString().slice(0, 10)}.pdf`);
         } catch (error) {
             console.error('Error exporting to PDF:', error);
             alert('Failed to export PDF file');
@@ -228,43 +250,54 @@ const StockNote = () => {
     // Clear all filters
     const clearFilters = () => {
         setSearchQuery('');
-        setFilterType('all');
+        setFilterStatus('all');
         setAdvancedFilters({
-            productId: '',
-            quantityMin: '',
-            quantityMax: '',
+            userId: '',
             startDate: '',
             endDate: ''
         });
     };
 
-    // Get type icon
-    const getTypeIcon = (type) => {
-        switch (type) {
-            case 'in':
-                return <TrendingUp className="w-4 h-4 text-green-500" />;
-            case 'out':
-                return <TrendingDown className="w-4 h-4 text-red-500" />;
-            case 'adjustment':
-                return <RotateCcw className="w-4 h-4 text-blue-500" />;
+    // Get status icon
+    const getStatusIcon = (status) => {
+        switch (status) {
+            case 'draft':
+                return <Clock className="w-4 h-4 text-gray-500" />;
+            case 'pending':
+                return <Clock className="w-4 h-4 text-yellow-500" />;
+            case 'approved':
+                return <CheckCircle className="w-4 h-4 text-green-500" />;
+            case 'rejected':
+                return <XCircle className="w-4 h-4 text-red-500" />;
+            case 'partially_approved':
+                return <TrendingUp className="w-4 h-4 text-cyan-500" />;
+            case 'completed':
+                return <Package className="w-4 h-4 text-blue-500" />;
             default:
-                return <Package className="w-4 h-4 text-gray-500" />;
+                return <Package className="w-4 h-4 text-black" />;
         }
     };
 
-    // Get type color
-    const getTypeColor = (type) => {
-        switch (type) {
-            case 'in':
+    // Get status color
+    const getStatusColor = (status) => {
+        switch (status) {
+            case 'draft':
+                return 'bg-gray-100 text-gray-800';
+            case 'pending':
+                return 'bg-yellow-100 text-yellow-800';
+            case 'approved':
                 return 'bg-green-100 text-green-800';
-            case 'out':
+            case 'rejected':
                 return 'bg-red-100 text-red-800';
-            case 'adjustment':
+            case 'partially_approved':
+                return 'bg-cyan-100 text-cyan-800';
+            case 'completed':
                 return 'bg-blue-100 text-blue-800';
             default:
-                return 'bg-gray-100 text-gray-800';
+                return 'bg-black text-black';
         }
     };
+
 
     // Format date
     const formatDate = (dateString) => {
@@ -277,8 +310,64 @@ const StockNote = () => {
         });
     };
 
+    // View request details
+    const handleViewDetails = async (requestId) => {
+        try {
+            const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+
+            const response = await axios.get(`http://127.0.0.1:8000/api/item-requests/${requestId}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/json'
+                }
+            });
+
+            if (response.data.success) {
+                setSelectedRequest(response.data.data);
+                setShowDetailModal(true);
+            } else {
+                alert('Gagal memuat detail request');
+            }
+        } catch (error) {
+            console.error('Error fetching request details:', error);
+            alert('Terjadi kesalahan saat memuat detail request');
+        }
+    };
+
+    const handleCancelRequest = async (requestId) => {
+        if (!window.confirm('Apakah Anda yakin ingin membatalkan request ini? Stok akan dikembalikan?')) return;
+
+        try {
+            const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+
+            const response = await axios.post(
+                `http://127.0.0.1:8000/api/item-requests/${requestId}/cancel`,
+                {},
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            if (response.data.success) {
+                alert('Request berhasil dibatalkan dan stok dikembalikan!');
+                fetchRequests(currentPage);
+            } else {
+                alert('Gagal membatalkan request: ' + response.data.message);
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Terjadi kesalahan saat membatalkan request');
+        }
+    };
+
+    // Handle page change
+    const handlePageChange = (newPage) => {
+        if (newPage >= 1 && newPage <= totalPages) {
+            setCurrentPage(newPage);
+            fetchRequests(newPage);
+        }
+    };
+
     // Tampilkan loading state
-    if (loading) {
+    if (loading && requests.length === 0) {
         return (
             <div className="flex items-center justify-center min-h-[400px]">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
@@ -294,7 +383,7 @@ const StockNote = () => {
                     <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
                     <p className="text-gray-600">{error}</p>
                     <button
-                        onClick={fetchStockNotes}
+                        onClick={() => fetchRequests(1)}
                         className="mt-4 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
                     >
                         Coba Lagi
@@ -305,23 +394,15 @@ const StockNote = () => {
     }
 
     // Filter data
-    const filteredItems = getSortedData(stockNotes.filter((item) => {
-        const matchesSearch = (item.product?.name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
-            (item.reference?.toLowerCase() || '').includes(searchQuery.toLowerCase());
-        const matchesType = filterType === 'all' || item.type === filterType;
-        const matchesProductId = !advancedFilters.productId ||
-            item.product_id.toString().includes(advancedFilters.productId);
-        const matchesQuantityMin = !advancedFilters.quantityMin ||
-            item.quantity >= parseInt(advancedFilters.quantityMin);
-        const matchesQuantityMax = !advancedFilters.quantityMax ||
-            item.quantity <= parseInt(advancedFilters.quantityMax);
+    const filteredItems = getSortedData(requests.filter((item) => {
+        const matchesUserId = !advancedFilters.userId ||
+            item.user_id.toString().includes(advancedFilters.userId);
         const matchesStartDate = !advancedFilters.startDate ||
             new Date(item.created_at) >= new Date(advancedFilters.startDate);
         const matchesEndDate = !advancedFilters.endDate ||
             new Date(item.created_at) <= new Date(advancedFilters.endDate);
 
-        return matchesSearch && matchesType && matchesProductId &&
-            matchesQuantityMin && matchesQuantityMax && matchesStartDate && matchesEndDate;
+        return matchesUserId && matchesStartDate && matchesEndDate;
     }));
 
     // Render sort icon
@@ -342,6 +423,14 @@ const StockNote = () => {
                     <h1 className="text-3xl font-bold text-gray-900">Riwayat Permintaan</h1>
                     <p className="text-gray-600 mt-1">Merekam segala permintaan yang dilakukan oleh pengguna</p>
                 </div>
+
+                <button
+                    onClick={() => fetchRequests(currentPage)}
+                    className="px-4 py-2 border font-medium text-white bg-green-500 border-gray-300 rounded-xl hover:bg-green-700 transition-colors"
+                    disabled={loading}
+                >
+                    {loading ? 'Refreshing...' : 'Refresh Data'}
+                </button>
             </div>
 
             {/* Filters and Search */}
@@ -353,7 +442,7 @@ const StockNote = () => {
                                 <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                                 <input
                                     type="text"
-                                    placeholder="Cari barang sesuai nama dan referensi"
+                                    placeholder="Cari berdasarkan request number atau nama user"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
@@ -363,15 +452,19 @@ const StockNote = () => {
 
                         <div className="flex items-center space-x-3">
                             <select
-                                value={filterType}
-                                onChange={(e) => setFilterType(e.target.value)}
+                                value={filterStatus}
+                                onChange={(e) => setFilterStatus(e.target.value)}
                                 className="px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
                             >
                                 <option value="all">Semua Status</option>
-                                <option value="in">Stock In</option>
-                                <option value="out">Stock Out</option>
-                                <option value="adjustment">Adjustment</option>
+                                <option value="draft">Draft</option>
+                                <option value="pending">Pending</option>
+                                <option value="approved">Approved</option>
+                                <option value="rejected">Rejected</option>
+                                <option value="partially_approved">Partially Approved</option>
+                                <option value="completed">Completed</option>
                             </select>
+
 
                             <button
                                 onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
@@ -386,7 +479,7 @@ const StockNote = () => {
                                 className="flex items-center px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors"
                             >
                                 <FileSpreadsheet className="w-4 h-4 mr-2" />
-                                Ekspor ke Excel
+                                Excel
                             </button>
 
                             <button
@@ -394,7 +487,7 @@ const StockNote = () => {
                                 className="flex items-center px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors"
                             >
                                 <File className="w-4 h-4 mr-2" />
-                                Ekspor ke PDF
+                                PDF
                             </button>
                         </div>
                     </div>
@@ -402,36 +495,14 @@ const StockNote = () => {
                     {/* Advanced Filters */}
                     {showAdvancedFilters && (
                         <div className="border-t pt-4">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">ID Barang</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">User ID</label>
                                     <input
                                         type="text"
-                                        placeholder="ID Barang"
-                                        value={advancedFilters.productId}
-                                        onChange={(e) => setAdvancedFilters({ ...advancedFilters, productId: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Kuantitas Minimum</label>
-                                    <input
-                                        type="number"
-                                        placeholder="Kuantitas Minimum"
-                                        value={advancedFilters.quantityMin}
-                                        onChange={(e) => setAdvancedFilters({ ...advancedFilters, quantityMin: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Kuantitas Maksimum</label>
-                                    <input
-                                        type="number"
-                                        placeholder="Kuantitas Maksimum"
-                                        value={advancedFilters.quantityMax}
-                                        onChange={(e) => setAdvancedFilters({ ...advancedFilters, quantityMax: e.target.value })}
+                                        placeholder="User ID"
+                                        value={advancedFilters.userId}
+                                        onChange={(e) => setAdvancedFilters({ ...advancedFilters, userId: e.target.value })}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                                     />
                                 </div>
@@ -463,7 +534,7 @@ const StockNote = () => {
                                     className="flex items-center px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
                                 >
                                     <X className="w-4 h-4 mr-2" />
-                                    Ulangi Filter
+                                    Reset Filter
                                 </button>
                             </div>
                         </div>
@@ -471,7 +542,7 @@ const StockNote = () => {
                 </div>
             </div>
 
-            {/* Stock Movement Table */}
+            {/* Requests Table */}
             <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full">
@@ -479,57 +550,24 @@ const StockNote = () => {
                             <tr>
                                 <th
                                     className="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
-                                    onClick={() => handleSort('id')}
+                                    onClick={() => handleSort('request_number')}
                                 >
                                     <div className="flex items-center justify-between">
-                                        ID
-                                        {renderSortIcon('id')}
+                                        Request Number
+                                        {renderSortIcon('request_number')}
                                     </div>
                                 </th>
                                 <th
                                     className="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
-                                    onClick={() => handleSort('product_name')}
-                                >
-                                    <div className="flex items-center justify-between">
-                                        Barang
-                                        {renderSortIcon('product_name')}
-                                    </div>
-                                </th>
-                                <th
-                                    className="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
-                                    onClick={() => handleSort('type')}
+                                    onClick={() => handleSort('status')}
                                 >
                                     <div className="flex items-center justify-between">
                                         Status
-                                        {renderSortIcon('type')}
+                                        {renderSortIcon('status')}
                                     </div>
                                 </th>
-                                <th
-                                    className="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
-                                    onClick={() => handleSort('quantity')}
-                                >
-                                    <div className="flex items-center justify-between">
-                                        Kuantitas
-                                        {renderSortIcon('quantity')}
-                                    </div>
-                                </th>
-                                <th
-                                    className="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
-                                    onClick={() => handleSort('previous_stock')}
-                                >
-                                    <div className="flex items-center justify-between">
-                                        Jumlah Stok Sebelumnya
-                                        {renderSortIcon('previous_stock')}
-                                    </div>
-                                </th>
-                                <th
-                                    className="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
-                                    onClick={() => handleSort('current_stock')}
-                                >
-                                    <div className="flex items-center justify-between">
-                                        Jumlah Stok Terkini
-                                        {renderSortIcon('current_stock')}
-                                    </div>
+                                <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Items Requested
                                 </th>
                                 <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Catatan
@@ -539,9 +577,12 @@ const StockNote = () => {
                                     onClick={() => handleSort('created_at')}
                                 >
                                     <div className="flex items-center justify-between">
-                                        Tanggal dan Waktu
+                                        Tanggal
                                         {renderSortIcon('created_at')}
                                     </div>
+                                </th>
+                                <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Aksi
                                 </th>
                             </tr>
                         </thead>
@@ -549,51 +590,87 @@ const StockNote = () => {
                             {filteredItems.map((item, index) => (
                                 <tr
                                     key={item.id}
-                                    className="hover:bg-gray-50 transition-colors animate-fade-in-up"
-                                    style={{ animationDelay: `${index * 50}ms` }}
+                                    className="hover:bg-gray-50 transition-colors"
                                 >
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                            {item.id}
+                                            {item.request_number}
                                         </span>
                                     </td>
+
                                     <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="flex items-center">
-                                            <div className="w-10 h-10 bg-gradient-to-r from-green-600 to-lime-400 rounded-lg flex items-center justify-center">
-                                                <Package className="w-5 h-5 text-white" />
-                                            </div>
-                                            <div className="ml-3">
-                                                <div className="text-sm font-medium text-gray-900">
-                                                    {item.product?.name || 'Unknown Product'}
+                                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(item.status)}`}>
+                                            {getStatusIcon(item.status)}
+                                            <span className="ml-1 capitalize">{item.status}</span>
+                                        </span>
+                                    </td>
+
+                                    <td className="px-6 py-4">
+                                        <div className="max-w-xs">
+                                            {item.details && item.details.length > 0 ? (
+                                                <div className="space-y-1">
+                                                    {item.details.slice(0, 3).map((detail, idx) => (
+                                                        <div key={idx} className="flex items-center text-xs">
+                                                            <div className="w-4 h-4 bg-green-500 rounded mr-2 flex-shrink-0 flex items-center justify-center">
+                                                                <Package className="w-2 h-2 text-white" />
+                                                            </div>
+                                                            <span className="truncate font-medium">
+                                                                {detail.name || detail.product?.name || `Product ID: ${detail.product_id}`}
+                                                            </span>
+                                                            <span className="ml-2 text-gray-500 flex-shrink-0">
+                                                                ({detail.requested_quantity}x)
+                                                            </span>
+                                                        </div>
+                                                    ))}
+                                                    {item.details.length > 3 && (
+                                                        <div className="text-xs text-gray-500 font-medium">
+                                                            +{item.details.length - 3} item lainnya
+                                                        </div>
+                                                    )}
                                                 </div>
-                                                <div className="text-xs text-gray-500">
-                                                    ID: {item.product_id}
-                                                </div>
-                                            </div>
+                                            ) : (
+                                                <span className="text-sm text-gray-500">No items</span>
+                                            )}
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getTypeColor(item.type)}`}>
-                                            {getTypeIcon(item.type)}
-                                            <span className="ml-1 capitalize">{item.type}</span>
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                                        <span className="text-sm font-medium text-gray-900">
-                                            {item.type === 'out' ? '-' : '+'}{item.quantity}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-900">
-                                        {item.previous_stock}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium text-gray-900">
-                                        {item.current_stock}
-                                    </td>
+
                                     <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">
-                                        {item.reference || '-'}
+                                        {item.note || '-'}
                                     </td>
+
                                     <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">
                                         {formatDate(item.created_at)}
+                                    </td>
+
+                                    <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
+                                        <div className="flex items-center justify-center space-x-2">
+                                            <button
+                                                onClick={() => handleViewDetails(item.id)}
+                                                className="text-blue-600 hover:text-blue-900"
+                                                title="View Details"
+                                            >
+                                                <Eye className="w-4 h-4" />
+                                            </button>
+
+                                            {item.status === 'draft' && (
+                                                <>
+                                                    <button
+                                                        onClick={() => handleUpdateRequest(item.id)}
+                                                        className="text-green-600 hover:text-green-900"
+                                                        title="Update Request"
+                                                    >
+                                                        <HandHelping className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleCancelRequest(item.id)}
+                                                        className="text-red-600 hover:text-red-900"
+                                                        title="Cancel Request"
+                                                    >
+                                                        <XCircle className="w-4 h-4" />
+                                                    </button>
+                                                </>
+                                            )}
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
@@ -602,27 +679,198 @@ const StockNote = () => {
                 </div>
             </div>
 
-            {/* Summary */}
+            {/* Pagination */}
             <div className="bg-white rounded-2xl shadow-lg p-4">
                 <div className="flex items-center justify-between">
                     <div className="text-sm text-gray-600">
-                        Showing {filteredItems.length} of {stockNotes.length} movements
+                        Showing {filteredItems.length} requests (Page {currentPage} of {totalPages})
                     </div>
                     <div className="flex space-x-2">
-                        <button className="px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 transition-colors">
+                        <button
+                            onClick={() => handlePageChange(currentPage - 1)}
+                            disabled={currentPage === 1}
+                            className="px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
                             Previous
                         </button>
-                        <button className="px-3 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 transition-colors">
-                            1
-                        </button>
-                        <button className="px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 transition-colors">
+
+                        <span className="px-3 py-2 bg-purple-600 text-white rounded-lg text-sm">
+                            {currentPage}
+                        </span>
+
+                        <button
+                            onClick={() => handlePageChange(currentPage + 1)}
+                            disabled={currentPage === totalPages}
+                            className="px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
                             Next
                         </button>
                     </div>
                 </div>
             </div>
+
+            {/* Detail Modal */}
+            {showDetailModal && selectedRequest && (
+                <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+                    <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-md bg-white">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-bold text-gray-900">
+                                Detail Request: {selectedRequest.request_number}
+                            </h3>
+                            <button
+                                onClick={() => setShowDetailModal(false)}
+                                className="text-gray-400 hover:text-gray-600"
+                            >
+                                <X className="w-6 h-6" />
+                            </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                            {/* Request Info */}
+                            <div className="space-y-3">
+                                <h4 className="font-semibold text-gray-900">Informasi Request</h4>
+                                <div className="space-y-2 text-sm">
+                                    <div>
+                                        <span className="font-medium text-gray-700">User:</span>
+                                        <span className="ml-2">{selectedRequest.user?.name || 'Unknown User'}</span>
+                                    </div>
+                                    <div>
+                                        <span className="font-medium text-gray-700">Status:</span>
+                                        <span className={`ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedRequest.status)}`}>
+                                            {getStatusIcon(selectedRequest.status)}
+                                            <span className="ml-1 capitalize">{selectedRequest.status}</span>
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <span className="font-medium text-gray-700">Tanggal Request:</span>
+                                        <span className="ml-2">{formatDate(selectedRequest.created_at)}</span>
+                                    </div>
+                                    {selectedRequest.approved_at && (
+                                        <div>
+                                            <span className="font-medium text-gray-700">Tanggal Disetujui:</span>
+                                            <span className="ml-2">{formatDate(selectedRequest.approved_at)}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Notes */}
+                            <div className="space-y-3">
+                                <h4 className="font-semibold text-gray-900">Catatan</h4>
+                                <div className="space-y-2 text-sm">
+                                    <div>
+                                        <span className="font-medium text-gray-700">Catatan User:</span>
+                                        <div className="mt-1 p-2 bg-gray-50 rounded text-gray-600">
+                                            {selectedRequest.note || 'Tidak ada catatan'}
+                                        </div>
+                                    </div>
+                                    {selectedRequest.admin_note && (
+                                        <div>
+                                            <span className="font-medium text-gray-700">Catatan Admin:</span>
+                                            <div className="mt-1 p-2 bg-blue-50 rounded text-gray-600">
+                                                {selectedRequest.admin_note}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Items Details */}
+                        <div className="mb-6">
+                            <h4 className="font-semibold text-gray-900 mb-3">Detail Barang</h4>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead className="bg-gray-50">
+                                        <tr>
+                                            <th className="px-4 py-2 text-left">Nama Barang</th>
+                                            <th className="px-4 py-2 text-center">Diminta</th>
+                                            <th className="px-4 py-2 text-center">Disetujui</th>
+                                            <th className="px-4 py-2 text-center">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-200">
+                                        {selectedRequest.details?.map((detail, index) => (
+                                            <tr key={index} className="hover:bg-gray-50">
+                                                <td className="px-4 py-2">
+                                                    <div className="flex items-center">
+                                                        {detail.product?.image_url ? (
+                                                            <img
+                                                                src={
+                                                                    detail.product?.image_url
+                                                                        ? detail.product.image_url.replace(/\s*\(\d+×\d+\)/, '')
+                                                                        : ''
+                                                                }
+                                                                alt={detail.product?.name}
+                                                                className="w-9 h-9 object-cover"
+                                                                onError={(e) => {
+                                                                    console.log('Gambar gagal dimuat:', detail.product?.image_url);
+                                                                    e.target.style.display = 'none';
+                                                                    e.target.nextElementSibling.style.display = 'flex';
+                                                                }}
+                                                            />
+                                                        ) : null}
+
+                                                        <div
+                                                            className="w-full h-full flex items-center justify-center"
+                                                            style={{ display: detail.product?.image_url ? 'none' : 'flex' }}
+                                                        >
+                                                            <Package className="w-5 h-5 text-white" />
+                                                        </div>
+                                                        <div className="font-medium">
+                                                            {detail.name || detail.product?.name || `Product ID: ${detail.product_id}`}
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-xs text-gray-500">
+                                                            SKU: {detail.product?.sku || 'N/A'}
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-2 text-center font-medium">
+                                                    {detail.requested_quantity}
+                                                </td>
+                                                <td className="px-4 py-2 text-center font-medium">
+                                                    {detail.approved_quantity || detail.requested_quantity}
+                                                </td>
+                                                <td className="px-4 py-2 text-center">
+                                                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(detail.status || selectedRequest.status)}`}>
+                                                        {getStatusIcon(selectedRequest.status)}
+                                                        <span className="ml-1 capitalize">{detail.status || selectedRequest.status}</span>
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex justify-end space-x-3">
+                            <button
+                                onClick={() => setShowDetailModal(false)}
+                                className="px-4 py-2 border bg-gray-400 border-gray-300 rounded-lg text-white hover:bg-gray-700"
+                            >
+                                Tutup
+                            </button>
+                            {selectedRequest.status === 'draft' && (
+                                <button
+                                    onClick={() => {
+                                        setShowDetailModal(false);
+                                        handleCancelRequest(selectedRequest.id);
+                                    }}
+                                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                                >
+                                    Batalkan Request
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
 
-export default StockNote;
+export default RequestNote;

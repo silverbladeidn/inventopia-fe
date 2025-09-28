@@ -1,20 +1,19 @@
 import React, { useEffect, useState } from "react";
-import RequestModal from '../components/UserDashboard/RequestModal';
 import axios from "axios";
 
 const Inventaris = () => {
     const [inventoryItems, setInventoryItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [showRequestModal, setShowRequestModal] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [filterStatus, setFilterStatus] = useState("all");
     const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
     const [barcodeSize, setBarcodeSize] = useState({ width: 100, height: 40 });
     const [sortField, setSortField] = useState("id");
     const [sortDirection, setSortDirection] = useState("asc");
-    const [selectedItem, setSelectedItem] = useState(null);
-    const [requestQuantity, setRequestQuantity] = useState(1);
+    const [requestItems, setRequestItems] = useState({});
+    const [showNoteSection, setShowNoteSection] = useState(false);
+    const [loadingAction, setLoadingAction] = useState(null);
     const [requestNote, setRequestNote] = useState("");
     const [advancedFilters, setAdvancedFilters] = useState({
         category: "all",
@@ -47,8 +46,34 @@ const Inventaris = () => {
         }
     };
 
+    const fetchUserRequests = async () => {
+        try {
+            const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+
+            if (!token) {
+                console.log('No token found, skipping request history fetch');
+                return;
+            }
+
+            const response = await axios.get('http://127.0.0.1:8000/api/item-requests', {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/json'
+                }
+            });
+
+            if (response.data.success) {
+                setUserRequests(response.data.data.data || response.data.data || []);
+            }
+        } catch (error) {
+            console.error('Error fetching user requests:', error);
+            // Don't show error for request history as it's optional
+        }
+    };
+
     useEffect(() => {
         fetchProducts();
+        fetchUserRequests(); // Also fetch user's request history
     }, []);
 
     useEffect(() => {
@@ -119,6 +144,106 @@ const Inventaris = () => {
         });
     };
 
+    const handleQuantityChange = (itemId, quantity) => {
+        const numQuantity = parseInt(quantity) || 0;
+        if (numQuantity > 0) {
+            setRequestItems(prev => ({
+                ...prev,
+                [itemId]: numQuantity
+            }));
+        } else {
+            setRequestItems(prev => {
+                const newRequestItems = { ...prev };
+                delete newRequestItems[itemId];
+                return newRequestItems;
+            });
+        }
+    };
+
+    const handleSubmitRequest = async (action = 'submit') => {
+        const itemsToRequest = Object.entries(requestItems)
+            .filter(([id, quantity]) => quantity > 0);
+
+        if (itemsToRequest.length === 0) {
+            alert('Silakan pilih barang dan masukkan jumlah yang ingin di-request');
+            return;
+        }
+
+        // Kalau mau note dulu, tetap jalan seperti sebelumnya
+        if (!showNoteSection && action === 'submit') {
+            setShowNoteSection(true);
+            return;
+        }
+
+        try {
+            setLoading(true);
+
+            const requestData = {
+                action,   // <---- kirim ke backend
+                note: requestNote || "",
+                details: itemsToRequest.map(([productId, quantity]) => ({
+                    product_id: parseInt(productId),
+                    qty: parseInt(quantity)
+                }))
+            };
+
+            const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+            if (!token) {
+                alert('Anda belum login. Silakan login terlebih dahulu.');
+                return;
+            }
+
+            const response = await axios.post(
+                'http://127.0.0.1:8000/api/item-requests',
+                requestData,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    }
+                }
+            );
+
+            if (response.data.success) {
+                alert(`Request ${action === 'draft' ? 'draft' : 'berhasil dikirim'}!
+            
+Request Number: ${response.data.data.request_number}
+Total Items: ${itemsToRequest.length} jenis barang
+Status: ${action === 'draft' ? 'Draft' : response.data.data.status}`);
+
+                setRequestItems({});
+                setRequestNote("");
+                setShowNoteSection(false);
+                fetchProducts();
+                fetchUserRequests();
+            } else {
+                alert('Gagal mengirim request: ' + (response.data.message || 'Unknown error'));
+            }
+
+        } catch (error) {
+            console.error('Request error:', error);
+            let errorMessage = 'Gagal mengirim request';
+            if (error.response) {
+                const { status, data } = error.response;
+                if (status === 401) errorMessage = 'Sesi login telah berakhir. Silakan login kembali.';
+                else if (status === 422)
+                    errorMessage = data.errors
+                        ? Object.values(data.errors).flat().join('\n')
+                        : data.message || 'Data tidak valid';
+                else if (status === 500)
+                    errorMessage = data.message || 'Server error.';
+                else
+                    errorMessage = data.message || `Error ${status}`;
+            } else if (error.request) {
+                errorMessage = 'Tidak dapat terhubung ke server.';
+            }
+            alert(errorMessage);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const filteredItems = getSortedData(
         inventoryItems.filter((item) => {
             const matchesSearch = item.name
@@ -157,26 +282,9 @@ const Inventaris = () => {
         ...new Set(inventoryItems.map((item) => item.category?.name).filter(Boolean)),
     ];
 
-    const handleQuickRequest = (item) => {
-        setSelectedItem(item);
-        setRequestQuantity(1);
-        setRequestNote('');
-        setShowRequestModal(true);
-    };
+    const totalRequestItems = Object.keys(requestItems).length;
 
-    const submitRequest = async () => {
-        try {
-            await new Promise(res => setTimeout(res, 800));
-            alert('Request berhasil dikirim!');
-            setShowRequestModal(false);
-            setSelectedItem(null);
-            setStats(prev => ({ ...prev, pendingRequests: prev.pendingRequests + 1 }));
-        } catch {
-            alert('Gagal mengirim request');
-        }
-    };
-
-    if (loading) {
+    if (loading && inventoryItems.length === 0) {
         return (
             <div className="flex items-center justify-center min-h-[400px]">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
@@ -213,10 +321,20 @@ const Inventaris = () => {
             {/* Header */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900">Manajemen Inventori</h1>
+                    <h1 className="text-3xl font-bold text-gray-900">Manajemen Inventaris</h1>
                     <p className="text-gray-600 mt-1">
-                        Tempat Mengatur segala jumlah barang dan jenis barang yang ada
+                        Tempat mengatur segala permintaan barang per ruangan.
                     </p>
+                </div>
+
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={fetchProducts}
+                        className="px-4 py-2 border font-medium text-white bg-green-500 border-gray-300 rounded-xl hover:bg-green-700 transition-colors"
+                        disabled={loading}
+                    >
+                        {loading ? 'Refreshing...' : 'Refresh Data'}
+                    </button>
                 </div>
             </div>
 
@@ -253,8 +371,80 @@ const Inventaris = () => {
                             >
                                 Filter Lanjutan
                             </button>
+
+                            {/* Tombol Simpan Draft */}
+                            <button
+                                onClick={() => handleSubmitRequest('draft')}
+                                className={`px-6 py-2 rounded-xl text-white font-medium transition-colors ${totalRequestItems > 0 && !loading
+                                    ? 'bg-yellow-600 hover:bg-yellow-700'
+                                    : 'bg-gray-400 cursor-not-allowed'
+                                    }`}
+                                disabled={totalRequestItems === 0 || loading}
+                            >
+                                {loadingAction === 'draft' ? 'Menyimpan...' : 'Simpan Draft'}
+                            </button>
+
+                            {/* Tombol Kirim Request */}
+                            <button
+                                onClick={() => handleSubmitRequest('submit')}
+                                className={`px-6 py-2 rounded-xl text-white font-medium transition-colors ${totalRequestItems > 0 && !loading
+                                    ? 'bg-green-600 hover:bg-green-700'
+                                    : 'bg-gray-400 cursor-not-allowed'
+                                    }`}
+                                disabled={totalRequestItems === 0 || loading}
+                            >
+                                {loadingAction === 'submit'
+                                    ? 'Processing...'
+                                    : `Request Barang ${totalRequestItems > 0 ? `(${totalRequestItems})` : ''}`}
+                            </button>
+
+                            {showNoteSection && (
+                                <button
+                                    onClick={() => {
+                                        setShowNoteSection(false);
+                                        setRequestNote("");
+                                    }}
+                                    className="px-4 py-2 border bg-red-500 border-gray-300 text-white font-medium rounded-xl hover:bg-red-700 transition-colors"
+                                >
+                                    Batal
+                                </button>
+                            )}
                         </div>
                     </div>
+
+                    {/* Note Section */}
+                    {showNoteSection && (
+                        <div className="border-t pt-4">
+                            <div className="bg-blue-50 rounded-lg p-4">
+                                <h3 className="text-lg font-medium text-gray-900 mb-3">
+                                    Tambahkan Catatan Request
+                                </h3>
+                                <p className="text-sm text-gray-600 mb-3">
+                                    Berikan deskripsi atau catatan tambahan untuk request barang ini:
+                                </p>
+                                <textarea
+                                    value={requestNote}
+                                    onChange={(e) => setRequestNote(e.target.value)}
+                                    placeholder="Contoh: Untuk kebutuhan ruang meeting lantai 2, urgent diperlukan besok pagi..."
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
+                                    rows="4"
+                                />
+                                <div className="mt-3 text-sm text-gray-500">
+                                    <strong>Items yang akan di-request:</strong>
+                                    <ul className="mt-1 space-y-1">
+                                        {Object.entries(requestItems).map(([itemId, quantity]) => {
+                                            const item = inventoryItems.find(i => i.id.toString() === itemId);
+                                            return item ? (
+                                                <li key={itemId} className="text-gray-600">
+                                                    • {item.name} - Jumlah: {quantity}
+                                                </li>
+                                            ) : null;
+                                        })}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Advanced Filters */}
                     {showAdvancedFilters && (
@@ -401,30 +591,36 @@ const Inventaris = () => {
                             </p>
                         </div>
 
-                        <button
-                            onClick={() => handleQuickRequest(item)}
-                            disabled={item.stock_quantity <= 0}
-                            className={`mt-4 px-4 py-2 rounded-lg text-white ${item.stock_quantity <= 0
-                                ? "bg-red-600 cursor-not-allowed"
-                                : "bg-green-600 hover:bg-green-700"
-                                }`}
-                        >
-                            {item.stock_quantity <= 0 ? "Kosong" : "Request Barang"}
-                        </button>
+                        {/* Quantity Input */}
+                        <div className="mt-4">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Jumlah Request:
+                            </label>
+                            <input
+                                type="number"
+                                min="0"
+                                max={item.stock_quantity}
+                                value={requestItems[item.id] || ""}
+                                onChange={(e) => handleQuantityChange(item.id, e.target.value)}
+                                disabled={item.stock_quantity <= 0 || item.status === 'out_of_stock'}
+                                placeholder={
+                                    item.stock_quantity <= 0 || item.status === 'out_of_stock'
+                                        ? "Stok habis"
+                                        : "0"
+                                }
+                                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${item.stock_quantity <= 0 || item.status === 'out_of_stock'
+                                    ? "bg-gray-100 border-gray-300 cursor-not-allowed text-gray-500"
+                                    : "border-gray-300 focus:ring-green-500"
+                                    }`}
+                            />
+                            {(item.stock_quantity <= 0 || item.status === 'out_of_stock') && (
+                                <p className="text-xs text-red-500 mt-1">
+                                    Barang tidak tersedia untuk di-request
+                                </p>
+                            )}
+                        </div>
                     </div>
                 ))}
-
-                {showRequestModal && (
-                    <RequestModal
-                        selectedItem={selectedItem}
-                        requestQuantity={requestQuantity}
-                        setRequestQuantity={setRequestQuantity}
-                        requestNote={requestNote}
-                        setRequestNote={setRequestNote}
-                        onClose={() => setShowRequestModal(false)}
-                        onSubmit={submitRequest}
-                    />
-                )}
             </div>
         </div>
     );

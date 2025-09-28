@@ -262,7 +262,7 @@ const ChartWidget = () => {
 
                     <button
                         onClick={handleRefresh}
-                        className="flex items-center px-4 py-2 bg-gradient-to-r from-green-600 to-lime-400 text-white rounded-xl hover:shadow-lg transition-all duration-200 transform hover:scale-105"
+                        className="flex items-center px-4 py-2 bg-green-600 text-white rounded-xl hover:shadow-lg transition-all duration-200 transform hover:scale-105"
                         disabled={isRefreshing || loading}
                     >
                         <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing || loading ? 'animate-spin' : ''}`} />

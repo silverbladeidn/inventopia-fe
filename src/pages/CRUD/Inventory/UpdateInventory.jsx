@@ -15,7 +15,6 @@ const UpdateInventory = () => {
         sku: '',
         price: '',
         cost_price: '',
-        stock_quantity: '',
         min_stock_level: '',
         max_stock_level: '',
         category_id: '',
@@ -90,7 +89,6 @@ const UpdateInventory = () => {
                 sku: product.sku || '',
                 price: product.price || '',
                 cost_price: product.cost_price || '',
-                stock_quantity: product.stock_quantity || '',
                 min_stock_level: product.min_stock_level || '',
                 max_stock_level: product.max_stock_level || '',
                 category_id: product.category_id || '',
@@ -242,10 +240,6 @@ const UpdateInventory = () => {
         if (!formData.cost_price || parseFloat(formData.cost_price) <= 0) {
             newErrors.cost_price = 'Harga modal harus valid dan lebih dari 0';
         }
-        if (!formData.stock_quantity || parseInt(formData.stock_quantity) < 0) {
-            newErrors.stock_quantity = 'Stok harus valid dan tidak negatif';
-        }
-
         if (parseFloat(formData.cost_price) > parseFloat(formData.price)) {
             newErrors.cost_price = 'Harga modal tidak boleh lebih besar dari harga jual';
         }
@@ -277,7 +271,6 @@ const UpdateInventory = () => {
             submitData.append('sku', formData.sku.trim());
             submitData.append('price', parseFloat(formData.price).toString());
             submitData.append('cost_price', parseFloat(formData.cost_price).toString());
-            submitData.append('stock_quantity', parseInt(formData.stock_quantity).toString());
             submitData.append('min_stock_level', parseInt(formData.min_stock_level || 0).toString());
             submitData.append('max_stock_level', parseInt(formData.max_stock_level || 9999).toString());
             submitData.append('category_id', formData.category_id.toString());
@@ -367,7 +360,7 @@ const UpdateInventory = () => {
         const showImage = (hasNewImage || hasCurrentImage) && imagePreview;
 
         return (
-            <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-purple-400 transition-colors">
+            <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-green-400 transition-colors">
                 {showImage ? (
                     <div className="relative">
                         <img
@@ -381,7 +374,7 @@ const UpdateInventory = () => {
                                 <button
                                     type="button"
                                     onClick={cancelNewImage}
-                                    className="absolute top-2 right-2 bg-yellow-500 text-white rounded-full p-1 hover:bg-yellow-600 transition-colors"
+                                    className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
                                     title="Batalkan gambar baru"
                                 >
                                     <X className="w-4 h-4" />
@@ -422,7 +415,7 @@ const UpdateInventory = () => {
                 />
                 <label
                     htmlFor="image-upload"
-                    className="mt-4 inline-flex items-center px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 cursor-pointer transition-colors"
+                    className="mt-4 inline-flex items-center px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-200 hover:text-black cursor-pointer transition-colors"
                 >
                     <Upload className="w-4 h-4 mr-2" />
                     {showImage ? 'Ganti Gambar' : 'Pilih Gambar'}
@@ -451,7 +444,7 @@ const UpdateInventory = () => {
                 <div className="mb-8">
                     <Link
                         to="/inventory"
-                        className="flex items-center text-gray-600 hover:text-gray-800 mb-4 transition-colors"
+                        className="inline-flex items-center text-gray-600 rounded-lg px-3 py-1 hover:bg-green-400 hover:text-black mb-4 transition-colors"
                     >
                         <ArrowLeft className="w-4 h-4 mr-2" />
                         Kembali ke Inventori
@@ -459,7 +452,7 @@ const UpdateInventory = () => {
 
                     <div className="flex items-center">
                         <div className="flex-shrink-0">
-                            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-600 rounded-xl flex items-center justify-center">
+                            <div className="w-12 h-12 bg-green-600 rounded-xl flex items-center justify-center">
                                 <Package className="w-6 h-6 text-white" />
                             </div>
                         </div>
@@ -491,7 +484,7 @@ const UpdateInventory = () => {
                                             name="name"
                                             value={formData.name}
                                             onChange={handleInputChange}
-                                            className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors ${errors.name ? 'border-red-500' : 'border-gray-300'}`}
+                                            className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors ${errors.name ? 'border-red-500' : 'border-gray-300'}`}
                                             placeholder="Masukkan nama produk"
                                         />
                                         {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
@@ -506,7 +499,7 @@ const UpdateInventory = () => {
                                             value={formData.category_id}
                                             onChange={handleInputChange}
                                             disabled={loadingCategories}
-                                            className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors ${errors.category_id ? 'border-red-500' : 'border-gray-300'} ${loadingCategories ? 'bg-gray-100' : ''}`}
+                                            className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors ${errors.category_id ? 'border-red-500' : 'border-gray-300'} ${loadingCategories ? 'bg-gray-100' : ''}`}
                                         >
                                             <option value="">{loadingCategories ? 'Memuat kategori...' : 'Pilih kategori'}</option>
                                             {Array.isArray(categories) && categories.map(category => (
@@ -527,7 +520,7 @@ const UpdateInventory = () => {
                                             name="sku"
                                             value={formData.sku}
                                             onChange={handleInputChange}
-                                            className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors ${errors.sku ? 'border-red-500' : 'border-gray-300'}`}
+                                            className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors ${errors.sku ? 'border-red-500' : 'border-gray-300'}`}
                                             placeholder="Masukkan SKU"
                                         />
                                         {errors.sku && <p className="text-red-500 text-sm mt-1">{errors.sku}</p>}
@@ -542,7 +535,7 @@ const UpdateInventory = () => {
                                             name="price"
                                             value={formData.price}
                                             onChange={handleInputChange}
-                                            className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors ${errors.price ? 'border-red-500' : 'border-gray-300'}`}
+                                            className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors ${errors.price ? 'border-red-500' : 'border-gray-300'}`}
                                             placeholder="Masukkan harga jual"
                                             min="0"
                                             step="0.01"
@@ -559,28 +552,12 @@ const UpdateInventory = () => {
                                             name="cost_price"
                                             value={formData.cost_price}
                                             onChange={handleInputChange}
-                                            className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors ${errors.cost_price ? 'border-red-500' : 'border-gray-300'}`}
+                                            className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors ${errors.cost_price ? 'border-red-500' : 'border-gray-300'}`}
                                             placeholder="Masukkan harga modal"
                                             min="0"
                                             step="0.01"
                                         />
                                         {errors.cost_price && <p className="text-red-500 text-sm mt-1">{errors.cost_price}</p>}
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Stok *
-                                        </label>
-                                        <input
-                                            type="number"
-                                            name="stock_quantity"
-                                            value={formData.stock_quantity}
-                                            onChange={handleInputChange}
-                                            className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors ${errors.stock_quantity ? 'border-red-500' : 'border-gray-300'}`}
-                                            placeholder="Masukkan jumlah stok"
-                                            min="0"
-                                        />
-                                        {errors.stock_quantity && <p className="text-red-500 text-sm mt-1">{errors.stock_quantity}</p>}
                                     </div>
 
                                     <div>
@@ -592,7 +569,7 @@ const UpdateInventory = () => {
                                             name="min_stock_level"
                                             value={formData.min_stock_level}
                                             onChange={handleInputChange}
-                                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors"
+                                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
                                             placeholder="Masukkan stok minimum"
                                             min="0"
                                         />
@@ -607,7 +584,7 @@ const UpdateInventory = () => {
                                             name="max_stock_level"
                                             value={formData.max_stock_level}
                                             onChange={handleInputChange}
-                                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors"
+                                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
                                             placeholder="Masukkan stok maksimum"
                                             min="0"
                                         />
@@ -644,7 +621,7 @@ const UpdateInventory = () => {
                             type="button"
                             onClick={handleSubmit}
                             disabled={submitting}
-                            className="px-6 py-3 bg-gradient-to-r from-green-600 to-lime-400 text-white rounded-xl hover:shadow-lg transition-all duration-200 transform hover:scale-105 font-medium flex items-center disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                            className="px-6 py-3 bg-green-600 text-white rounded-xl hover:shadow-lg transition-all duration-200 transform hover:scale-105 font-medium flex items-center disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                         >
                             {submitting ? (
                                 <>

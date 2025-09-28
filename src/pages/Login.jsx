@@ -82,69 +82,40 @@ const Login = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-
         if (!validateForm()) return;
 
         setIsLoading(true);
-        setErrors({}); // Clear previous errors
+        setErrors({});
 
         try {
-            // Make API call to Laravel backend
-            const response = await axios.post(LOGIN_ENDPOINT, {
+            const { data } = await axios.post(LOGIN_ENDPOINT, {
                 email: formData.email,
                 password: formData.password,
                 remember: formData.remember
-            }, {
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                timeout: 40000 // 10 seconds timeout
-            });
+            }, { headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' } });
 
-            // Add this debug logging in your handleSubmit function, right after successful login response
+            const { token, user } = data;
 
-            console.log('Login successful:', response.data);
-            console.log('User data:', response.data.user);
-            console.log('User role:', response.data.user?.role);
-            console.log('Role type:', typeof response.data.user?.role);
+            if (token) {
+                localStorage.setItem('auth_token', token);
+                localStorage.setItem('user', JSON.stringify(user));
+                localStorage.setItem('user_id', user.id);
 
-            // Handle successful login
-            if (response.data.token) {
-                // Store token if provided
-                localStorage.setItem('auth_token', response.data.token);
-
-                // Store user data if provided
-                if (response.data.user) {
-                    localStorage.setItem('user', JSON.stringify(response.data.user));
-                    localStorage.setItem('user_id', response.data.user.id);
-                }
-
-                // If remember me is checked, store login info for longer period
                 if (formData.remember) {
                     localStorage.setItem('remember_user', 'true');
                     localStorage.setItem('remembered_email', formData.email);
-                    const expirationDate = new Date();
-                    expirationDate.setDate(expirationDate.getDate() + 30);
-                    localStorage.setItem('token_expiration', expirationDate.toISOString());
+                    const exp = new Date();
+                    exp.setDate(exp.getDate() + 30);
+                    localStorage.setItem('token_expiration', exp.toISOString());
                 } else {
                     localStorage.removeItem('remember_user');
                     localStorage.removeItem('remembered_email');
                     localStorage.removeItem('token_expiration');
                 }
 
-                // Navigate to dashboard - with improved role checking
-                const userRole = response.data.user?.role;
-                console.log('Checking role for navigation:', userRole);
-
-                // Try different possible role values (case insensitive)
-                if (userRole && userRole.toLowerCase() === 'user') {
-                    console.log('Navigating to /homeuser for user role');
-                    navigate('/homeuser');
-                } else {
-                    console.log('Navigating to /home for admin/other role');
-                    navigate('/home');
-                }
+                // === Navigasi sesuai role ===
+                const role = user?.role?.toString().toLowerCase();
+                navigate(role === 'user' ? '/homeuser' : '/home');
             }
         } catch (error) {
             console.error('Login error:', error);
@@ -188,6 +159,7 @@ const Login = () => {
             setIsLoading(false);
         }
     };
+
 
     // Load remembered email on component mount
     React.useEffect(() => {

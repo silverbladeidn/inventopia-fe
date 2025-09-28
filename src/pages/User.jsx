@@ -12,6 +12,7 @@ import {
     Edit,
     Trash,
     Lock,
+    Check,
     Crown,
     User
 } from 'lucide-react';
@@ -25,14 +26,26 @@ const Users = () => {
 
     const fetchUsers = async () => {
         try {
+            setLoading(true);
             const response = await axios.get('http://127.0.0.1:8000/api/users');
-            setUsers(response.data);
+
+            if (response.data && response.data.success) {
+                const usersData = response.data.data || [];
+                setUsers(usersData.map(u => ({
+                    ...u,
+                    role: u.role?.name || 'User'
+                })));
+            } else {
+                console.error('Response tidak valid:', response.data);
+            }
         } catch (error) {
             console.error('Gagal fetch users:', error);
+            alert('Gagal memuat data pengguna');
         } finally {
             setLoading(false);
         }
     };
+
 
     useEffect(() => {
         fetchUsers();
@@ -170,24 +183,45 @@ const Users = () => {
                 </div>
                 <Link
                     to="/users/add"
-                    className="flex items-center px-4 py-2 bg-gradient-to-r from-green-600 to-lime-600 text-white rounded-xl hover:shadow-lg transition-all duration-200 transform hover:scale-105">
+                    className="flex items-center px-4 py-2 bg-green-500 text-white rounded-xl hover:shadow-lg transition-all duration-200 transform hover:scale-105">
                     <Plus className="w-4 h-4 mr-2" />
                     Tambah Pengguna
                 </Link>
             </div>
 
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-5 sm:grid-cols-4 lg:grid-cols-4 gap-2">
                 {[
-                    { title: 'Total Users', icon: User, value: users.length, color: 'from-green-500 to-lime-600' },
-                    { title: 'Admins', icon: UserCheck, value: users.filter(u => u.role === 'Admin').length, color: 'from-lime-500 to-lime-600' },
-                    { title: 'Superadmins', icon: Crown, value: users.filter(u => u.role === 'Superadmin').length, color: 'from-yellow-500 to-yellow-600' },
+                    {
+                        title: 'Total Users',
+                        icon: User,
+                        value: users.length,
+                        color: 'bg-emerald-500'
+                    },
+                    {
+                        title: 'Admins',
+                        icon: UserCheck,
+                        value: users.filter(u => u.role === 'Admin').length,
+                        color: 'bg-green-500'
+                    },
+                    {
+                        title: 'Superadmins',
+                        icon: Crown,
+                        value: users.filter(u => u.role === 'Superadmin').length,
+                        color: 'bg-amber-500'
+                    },
+                    {
+                        title: 'Users',
+                        icon: User,
+                        value: users.filter(u => u.role === 'User').length,
+                        color: 'bg-orange-500'
+                    },
                 ].map((stat, index) => {
                     const IconComponent = stat.icon;
                     return (
                         <div
                             key={stat.title}
-                            className={`bg-gradient-to-br ${stat.color} p-6 rounded-2xl text-white transform hover:scale-105 transition-all duration-300`}
+                            className={`${stat.color} p-6 rounded-2xl text-white transform hover:scale-105 transition-all duration-300`}
                             style={{ animationDelay: `${index * 100}ms` }}
                         >
                             <div className="flex items-center justify-between">
@@ -228,6 +262,7 @@ const Users = () => {
                             <option value="all">Semua Role</option>
                             <option value="Admin">Admin</option>
                             <option value="Superadmin">Superadmin</option>
+                            <option value="User">User</option> {/* Tambahkan ini */}
                         </select>
                     </div>
                 </div>
@@ -243,7 +278,7 @@ const Users = () => {
                     >
                         <div className="flex items-start justify-between mb-4">
                             <div className="flex items-center">
-                                <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-lime-500 rounded-full flex items-center justify-center">
+                                <div className="w-12 h-12 bg-orange-400 rounded-full flex items-center justify-center">
                                     <span className="text-white font-semibold text-sm">{getInitials(user.name)}</span>
                                 </div>
                                 <div className="ml-3">

@@ -215,9 +215,9 @@ const UserDashboard = () => {
                 <div className="max-w-7xl mx-auto px-6 py-6">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                         <div>
-                            <h1 className="text-3xl font-bold text-gray-900">Dashboard Overview</h1>
+                            <h1 className="text-3xl font-bold text-gray-900">Beranda</h1>
                             <p className="text-gray-600 mt-1">
-                                Monitor stok, request barang, dan kelola kebutuhan inventory Anda
+                                Monitor stok, request barang, dan kelola kebutuhan inventory per ruangan.
                             </p>
                         </div>
                         <div className="flex items-center space-x-4">

@@ -339,8 +339,8 @@ const StockNote = () => {
             {/* Header */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900">Stock Movements</h1>
-                    <p className="text-gray-600 mt-1">Track all stock movement activities</p>
+                    <h1 className="text-3xl font-bold text-gray-900">Riwayat Penyimpanan</h1>
+                    <p className="text-gray-600 mt-1">Merekam segala penyimpanan atau pengeluaran barang-barang.</p>
                 </div>
             </div>
 
@@ -559,8 +559,30 @@ const StockNote = () => {
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="flex items-center">
-                                            <div className="w-10 h-10 bg-gradient-to-r from-green-600 to-lime-400 rounded-lg flex items-center justify-center">
-                                                <Package className="w-5 h-5 text-white" />
+                                            <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center overflow-hidden">
+                                                {item.product?.image_url ? (
+                                                    <img
+                                                        src={
+                                                            item.product?.image_url
+                                                                ? item.product.image_url.replace(/\s*\(\d+×\d+\)/, '')
+                                                                : ''
+                                                        }
+                                                        alt={item.product?.name}
+                                                        className="w-full h-full object-cover"
+                                                        onError={(e) => {
+                                                            console.log('Gambar gagal dimuat:', item.product?.image_url);
+                                                            e.target.style.display = 'none';
+                                                            e.target.nextElementSibling.style.display = 'flex';
+                                                        }}
+                                                    />
+                                                ) : null}
+
+                                                <div
+                                                    className="w-full h-full flex items-center justify-center"
+                                                    style={{ display: item.product?.image_url ? 'none' : 'flex' }}
+                                                >
+                                                    <Package className="w-5 h-5 text-white" />
+                                                </div>
                                             </div>
                                             <div className="ml-3">
                                                 <div className="text-sm font-medium text-gray-900">

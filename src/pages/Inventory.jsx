@@ -549,11 +549,11 @@ const Inventory = () => {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-bold text-gray-900">Manajemen Inventori</h1>
-                    <p className="text-gray-600 mt-1">Tempat Mengatur segala jumlah barang dan jenis barang yang ada</p>
+                    <p className="text-gray-600 mt-1">Tempat mengatur segala jumlah barang dan jenis barang di penyimpanan.</p>
                 </div>
                 <Link
                     to="/inventory/add" // sesuaikan dengan route path Anda
-                    className="flex items-center px-4 py-2 bg-gradient-to-r from-green-600 to-lime-400 text-white rounded-xl hover:shadow-lg transition-all duration-200 transform hover:scale-105 no-underline"
+                    className="flex items-center px-4 py-2 bg-green-600 text-white rounded-xl hover:shadow-lg transition-all duration-200 transform hover:scale-105 no-underline"
                 >
                     <Plus className="w-4 h-4 mr-2" />
                     Tambah Produk

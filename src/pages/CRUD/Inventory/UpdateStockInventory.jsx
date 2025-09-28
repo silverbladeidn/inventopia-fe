@@ -212,7 +212,7 @@ const UpdateStockInventory = () => {
                     <p className="text-gray-600 mb-4">Produk yang Anda cari tidak ditemukan.</p>
                     <Link
                         to="/inventory"
-                        className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                        className="inline-flex items-center text-gray-600 rounded-lg px-3 py-1 hover:bg-green-400 hover:text-black mb-4 transition-colors"
                     >
                         <ArrowLeft className="w-4 h-4 mr-2" />
                         Kembali ke Inventory
@@ -237,9 +237,9 @@ const UpdateStockInventory = () => {
                                     <ArrowLeft className="w-5 h-5 text-gray-600" />
                                 </button>
                                 <div className="flex items-center space-x-3">
-                                    <Archive className="w-6 h-6 text-purple-600" />
+                                    <Archive className="w-6 h-6 text-green-600" />
                                     <div>
-                                        <h1 className="text-xl font-semibold text-gray-900">Update Stok Inventory</h1>
+                                        <h1 className="text-xl font-semibold text-gray-900">Update Stok Inventori</h1>
                                         <p className="text-sm text-gray-600">{product.name}</p>
                                     </div>
                                 </div>
@@ -312,7 +312,7 @@ const UpdateStockInventory = () => {
                                     type="number"
                                     value={quantity}
                                     onChange={(e) => setQuantity(e.target.value)}
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                                     placeholder={`Masukkan jumlah untuk ${operation === 'add' ? 'ditambahkan' : operation === 'subtract' ? 'dikurangi' : 'diset'}`}
                                     min="1"
                                     required
@@ -339,7 +339,7 @@ const UpdateStockInventory = () => {
                                 <select
                                     value={reason}
                                     onChange={(e) => setReason(e.target.value)}
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                                     required
                                 >
                                     <option value="">Pilih alasan</option>
@@ -363,7 +363,7 @@ const UpdateStockInventory = () => {
                                     value={notes}
                                     onChange={(e) => setNotes(e.target.value)}
                                     rows={4}
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                                     placeholder="Catatan tambahan (opsional)"
                                 />
                             </div>
@@ -390,7 +390,7 @@ const UpdateStockInventory = () => {
                                     type="submit"
                                     onClick={handleSubmit}
                                     disabled={submitting}
-                                    className="flex-1 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center font-medium"
+                                    className="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center font-medium"
                                 >
                                     {submitting ? (
                                         <>

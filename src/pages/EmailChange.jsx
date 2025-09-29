@@ -14,12 +14,17 @@ const EmailChange = () => {
     const [newEmail, setNewEmail] = useState('');
     const [ccEmail, setCcEmail] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [thresholdInput, setThresholdInput] = useState(emailSettings.lowStockThreshold);
 
     const API_BASE_URL = 'http://127.0.0.1:8000/api';
 
     useEffect(() => {
         fetchEmailSettings();
     }, []);
+
+    useEffect(() => {
+        setThresholdInput(emailSettings.lowStockThreshold);
+    }, [emailSettings.lowStockThreshold]);
 
     const fetchEmailSettings = async () => {
         try {
@@ -54,6 +59,19 @@ const EmailChange = () => {
         }
     };
 
+    const saveThreshold = async () => {
+        const v = parseInt(thresholdInput, 10);
+        if (!isNaN(v) && v >= 0) {
+            const ok = await updateSettings(
+                { ...emailSettings, lowStockThreshold: v },
+                'Batas stok rendah diperbarui'
+            );
+            if (ok) window.alert(`Batas stok rendah sekarang ${v}`);
+        } else {
+            window.alert('Nilai batas stok tidak valid');
+        }
+    };
+
     const handleUpdateEmail = async (e) => {
         e.preventDefault();
         if (!newEmail.trim() || !isValidEmail(newEmail)) {
@@ -68,9 +86,9 @@ const EmailChange = () => {
             lowStockThreshold: emailSettings.lowStockThreshold,
             ccEmails: emailSettings.ccEmails
         }, 'Email berhasil diperbarui');
-        if (ok) testEmailNotification();
         setIsLoading(false);
     };
+
 
     const addCcEmail = async () => {
         if (!ccEmail.trim() || !isValidEmail(ccEmail)) {
@@ -290,25 +308,30 @@ const EmailChange = () => {
                         <h3 className="text-lg font-semibold text-gray-900 mb-4">
                             Batas Stok Rendah
                         </h3>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Threshold Stok Rendah
-                            </label>
-                            <div className="flex items-center space-x-2">
-                                <input
-                                    type="number"
-                                    min="0"
-                                    value={emailSettings.lowStockThreshold}
-                                    onChange={(e) => handleThresholdChange(e.target.value)}
-                                    className="w-20 px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
-                                />
-                                <span className="text-gray-600">item</span>
-                            </div>
-                            <p className="text-sm text-gray-500 mt-1">
-                                Notifikasi akan dikirim saat stok ≤ nilai ini
-                            </p>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Threshold Stok Rendah
+                        </label>
+                        <div className="flex items-center gap-x-5">
+                            <input
+                                type="number"
+                                min="0"
+                                value={thresholdInput}
+                                onChange={(e) => setThresholdInput(e.target.value)}
+                                className="w-20 px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
+                            />
+                            <span className="text-gray-600">item</span>
+                            <button
+                                onClick={saveThreshold}
+                                className="px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors"
+                            >
+                                Simpan
+                            </button>
                         </div>
+                        <p className="text-sm text-gray-500 mt-1">
+                            Notifikasi akan dikirim saat stok ≤ nilai ini
+                        </p>
                     </div>
+
 
                     {/* Current Status */}
                     <div className="bg-white rounded-2xl shadow-lg p-6">

@@ -27,59 +27,44 @@ import {
 } from 'lucide-react';
 
 const RequestNote = () => {
+    // State disederhanakan
     const [searchQuery, setSearchQuery] = useState('');
     const [filterStatus, setFilterStatus] = useState('all');
     const [requests, setRequests] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [requestItems, setRequestItems] = useState({});
     const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
-
-    // Sorting state
     const [sortField, setSortField] = useState('created_at');
     const [sortDirection, setSortDirection] = useState('desc');
-
-    // Advanced filters
+    const [selectedRequest, setSelectedRequest] = useState(null);
+    const [showDetailModal, setShowDetailModal] = useState(false);
     const [advancedFilters, setAdvancedFilters] = useState({
         userId: '',
         startDate: '',
         endDate: ''
     });
 
-    // Modal state for viewing request details
-    const [selectedRequest, setSelectedRequest] = useState(null);
-    const [showDetailModal, setShowDetailModal] = useState(false);
-
-    // Fungsi untuk mengambil data item requests dari API
+    // Fetch data - disederhanakan
     const fetchRequests = async (page = 1) => {
         try {
             setLoading(true);
-
             const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
 
             if (!token) {
-                setError('Token tidak ditemukan. Silakan login terlebih dahulu.');
+                setError('Token tidak ditemukan');
                 return;
             }
 
-            const params = new URLSearchParams({
-                page: page.toString()
-            });
+            const params = { page };
+            if (filterStatus !== 'all') params.status = filterStatus;
+            if (searchQuery.trim()) params.search = searchQuery.trim();
 
-            if (filterStatus !== 'all') {
-                params.append('status', filterStatus);
-            }
-
-            if (searchQuery.trim()) {
-                params.append('search', searchQuery.trim());
-            }
-
-            const response = await axios.get(`http://127.0.0.1:8000/api/item-requests?${params}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Accept': 'application/json'
-                }
+            const response = await axios.get(`http://127.0.0.1:8000/api/item-requests`, {
+                params,
+                headers: { 'Authorization': `Bearer ${token}` }
             });
 
             if (response.data.success) {
@@ -88,82 +73,67 @@ const RequestNote = () => {
                 setCurrentPage(data.current_page || 1);
                 setTotalPages(data.last_page || 1);
                 setError(null);
-            } else {
-                setError('Gagal mengambil data requests');
             }
         } catch (err) {
-            console.error('Error fetching requests:', err);
-            if (err.response?.status === 401) {
-                setError('Sesi login telah berakhir. Silakan login kembali.');
-            } else {
-                setError('Gagal mengambil data requests');
-            }
+            setError(err.response?.status === 401 ?
+                'Sesi login telah berakhir' : 'Gagal mengambil data');
         } finally {
             setLoading(false);
         }
     };
 
-    // Panggil fetchRequests saat komponen dimount atau filter berubah
+    // useEffect tetap sama
     useEffect(() => {
         fetchRequests(1);
     }, [filterStatus, searchQuery]);
 
-    // Sorting function
+    // Sorting disederhanakan
     const handleSort = (field) => {
-        if (sortField === field) {
-            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-        } else {
-            setSortField(field);
-            setSortDirection('asc');
-        }
+        setSortField(field);
+        setSortDirection(prev => sortField === field ?
+            (prev === 'asc' ? 'desc' : 'asc') : 'asc');
     };
 
-    // Get sorted data
+    // Get sorted data - disederhanakan
     const getSortedData = (data) => {
         return [...data].sort((a, b) => {
-            let aValue, bValue;
+            let aValue = a[sortField];
+            let bValue = b[sortField];
 
-            switch (sortField) {
-                case 'request_number':
-                    aValue = a.request_number;
-                    bValue = b.request_number;
-                    break;
-                case 'status':
-                    aValue = a.status;
-                    bValue = b.status;
-                    break;
-                case 'items_count':
-                    aValue = a.details?.length || 0;
-                    bValue = b.details?.length || 0;
-                    break;
-                case 'created_at':
-                    aValue = new Date(a.created_at);
-                    bValue = new Date(b.created_at);
-                    break;
-                default:
-                    aValue = a[sortField];
-                    bValue = b[sortField];
+            // Handle special fields
+            if (sortField === 'created_at') {
+                aValue = new Date(aValue);
+                bValue = new Date(bValue);
+            } else if (sortField === 'items_count') {
+                aValue = a.details?.length || 0;
+                bValue = b.details?.length || 0;
             }
 
-            if (sortDirection === 'asc') {
-                return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
-            } else {
-                return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
-            }
+            return sortDirection === 'asc' ?
+                (aValue < bValue ? -1 : 1) :
+                (aValue > bValue ? -1 : 1);
         });
     };
 
-    // Export to Excel
+    // Clear filters function - ADDED
+    const clearFilters = () => {
+        setAdvancedFilters({
+            userId: '',
+            startDate: '',
+            endDate: ''
+        });
+        setSearchQuery('');
+        setFilterStatus('all');
+    };
+
+    // Export to Excel - disederhanakan
     const exportToExcel = async () => {
         try {
             const workbook = new ExcelJS.Workbook();
             const worksheet = workbook.addWorksheet('Riwayat Permintaan');
 
-            // Add headers
-            const headers = ['Request Number', 'User', 'Status', 'Total Items', 'Note', 'Created At'];
-            worksheet.addRow(headers);
+            worksheet.addRow(['Request Number', 'User', 'Status', 'Total Items', 'Note', 'Created At']);
 
-            // Add data
             filteredItems.forEach(item => {
                 worksheet.addRow([
                     item.request_number,
@@ -175,43 +145,29 @@ const RequestNote = () => {
                 ]);
             });
 
-            // Generate and download
             const buffer = await workbook.xlsx.writeBuffer();
             const blob = new Blob([buffer], {
                 type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
             });
 
-            const link = document.createElement('a');
             const url = URL.createObjectURL(blob);
-            link.setAttribute('href', url);
-            link.setAttribute('download', `item_requests_${new Date().toISOString().slice(0, 10)}.xlsx`);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `item_requests_${new Date().toISOString().slice(0, 10)}.xlsx`;
             link.click();
-            document.body.removeChild(link);
             URL.revokeObjectURL(url);
         } catch (error) {
-            console.error('Error exporting to Excel:', error);
             alert('Failed to export Excel file');
         }
     };
 
-    // Export to PDF
+    // Export to PDF - disederhanakan
     const exportToPDF = () => {
         try {
             const doc = new jsPDF();
-
-            // Title
-            doc.setFontSize(18);
-            doc.setFont('helvetica', 'bold');
             doc.text('Item Request Report', 14, 20);
-
-            // Date
-            doc.setFontSize(10);
-            doc.setFont('helvetica', 'normal');
             doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 30);
 
-            // Table data
             const tableColumns = ['Request Number', 'User', 'Status', 'Items', 'Created At'];
             const tableRows = filteredItems.map(item => [
                 item.request_number,
@@ -221,85 +177,47 @@ const RequestNote = () => {
                 new Date(item.created_at).toLocaleDateString()
             ]);
 
-            // Generate table
             autoTable(doc, {
                 head: [tableColumns],
                 body: tableRows,
                 startY: 40,
-                styles: {
-                    fontSize: 8,
-                    cellPadding: 2,
-                },
-                headStyles: {
-                    fillColor: [230, 230, 250],
-                    textColor: [0, 0, 0],
-                    fontStyle: 'bold'
-                },
-                alternateRowStyles: {
-                    fillColor: [245, 245, 245]
-                }
+                styles: { fontSize: 8 }
             });
 
             doc.save(`item_requests_${new Date().toISOString().slice(0, 10)}.pdf`);
         } catch (error) {
-            console.error('Error exporting to PDF:', error);
             alert('Failed to export PDF file');
         }
     };
 
-    // Clear all filters
-    const clearFilters = () => {
-        setSearchQuery('');
-        setFilterStatus('all');
-        setAdvancedFilters({
-            userId: '',
-            startDate: '',
-            endDate: ''
-        });
-    };
-
-    // Get status icon
+    // Status functions disederhanakan
     const getStatusIcon = (status) => {
-        switch (status) {
-            case 'draft':
-                return <Clock className="w-4 h-4 text-gray-500" />;
-            case 'pending':
-                return <Clock className="w-4 h-4 text-yellow-500" />;
-            case 'approved':
-                return <CheckCircle className="w-4 h-4 text-green-500" />;
-            case 'rejected':
-                return <XCircle className="w-4 h-4 text-red-500" />;
-            case 'partially_approved':
-                return <TrendingUp className="w-4 h-4 text-cyan-500" />;
-            case 'completed':
-                return <Package className="w-4 h-4 text-blue-500" />;
-            default:
-                return <Package className="w-4 h-4 text-black" />;
-        }
+        const icons = {
+            draft: <Clock className="w-4 h-4 text-lime-500" />,
+            pending: <Clock className="w-4 h-4 text-yellow-500" />,
+            approved: <CheckCircle className="w-4 h-4 text-green-500" />,
+            rejected: <XCircle className="w-4 h-4 text-red-500" />,
+            cancelled: <XCircle className="w-4 h-4 text-black" />,
+            partially_approved: <TrendingUp className="w-4 h-4 text-cyan-500" />,
+            completed: <Package className="w-4 h-4 text-blue-500" />
+        };
+        return icons[status] || <Package className="w-4 h-4 text-gray-500" />;
     };
 
-    // Get status color
     const getStatusColor = (status) => {
-        switch (status) {
-            case 'draft':
-                return 'bg-gray-100 text-gray-800';
-            case 'pending':
-                return 'bg-yellow-100 text-yellow-800';
-            case 'approved':
-                return 'bg-green-100 text-green-800';
-            case 'rejected':
-                return 'bg-red-100 text-red-800';
-            case 'partially_approved':
-                return 'bg-cyan-100 text-cyan-800';
-            case 'completed':
-                return 'bg-blue-100 text-blue-800';
-            default:
-                return 'bg-black text-black';
-        }
+        const colors = {
+            draft: 'bg-lime-100 text-lime-800',
+            pending: 'bg-yellow-100 text-yellow-800',
+            approved: 'bg-green-100 text-green-800',
+            rejected: 'bg-white-100 text-red-800',
+            cancelled: 'bg-white text-black border-black border-2',
+            partially_approved: 'bg-cyan-100 text-cyan-800',
+            completed: 'bg-blue-100 text-blue-800'
+        };
+        return colors[status] || 'bg-gray-100 text-gray-800';
     };
 
-
-    // Format date
+    // Format date disederhanakan
     const formatDate = (dateString) => {
         return new Date(dateString).toLocaleDateString('id-ID', {
             year: 'numeric',
@@ -310,36 +228,36 @@ const RequestNote = () => {
         });
     };
 
-    // View request details
+    // View details - disederhanakan
     const handleViewDetails = async (requestId) => {
         try {
             const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
-
-            const response = await axios.get(`http://127.0.0.1:8000/api/item-requests/${requestId}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Accept': 'application/json'
-                }
-            });
+            const response = await axios.get(
+                `http://127.0.0.1:8000/api/item-requests/${requestId}`,
+                { headers: { 'Authorization': `Bearer ${token}` } }
+            );
 
             if (response.data.success) {
                 setSelectedRequest(response.data.data);
                 setShowDetailModal(true);
-            } else {
-                alert('Gagal memuat detail request');
             }
         } catch (error) {
-            console.error('Error fetching request details:', error);
             alert('Terjadi kesalahan saat memuat detail request');
         }
     };
 
+    // Handle update request - ADDED
+    const handleUpdateRequest = async (requestId) => {
+        // Buka detail modal untuk edit
+        await handleViewDetails(requestId);
+    };
+
+    // Cancel request - disederhanakan
     const handleCancelRequest = async (requestId) => {
-        if (!window.confirm('Apakah Anda yakin ingin membatalkan request ini? Stok akan dikembalikan?')) return;
+        if (!confirm('Apakah Anda yakin ingin membatalkan request ini?')) return;
 
         try {
             const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
-
             const response = await axios.post(
                 `http://127.0.0.1:8000/api/item-requests/${requestId}/cancel`,
                 {},
@@ -347,24 +265,74 @@ const RequestNote = () => {
             );
 
             if (response.data.success) {
-                alert('Request berhasil dibatalkan dan stok dikembalikan!');
+                alert('Request berhasil dibatalkan!');
                 fetchRequests(currentPage);
-            } else {
-                alert('Gagal membatalkan request: ' + response.data.message);
             }
         } catch (error) {
-            console.error(error);
             alert('Terjadi kesalahan saat membatalkan request');
         }
     };
 
-    // Handle page change
+    const handleSubmitRequestFromDetail = async () => {
+        try {
+            if (!selectedRequest) {
+                alert('Data request tidak ditemukan');
+                return false;
+            }
+
+            setLoading(true);
+            const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+
+            // Gunakan endpoint submit khusus
+            const response = await axios.post(
+                `http://127.0.0.1:8000/api/item-requests/${selectedRequest.id}/submit`,
+                {},
+                {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+
+            if (response.data.success) {
+                alert('Request berhasil dikirim!');
+                setShowDetailModal(false);
+                setSelectedRequest(null);
+
+                setTimeout(() => {
+                    fetchRequests(currentPage);
+                }, 500);
+
+                return true;
+            }
+        } catch (error) {
+            console.error('Submit error:', error);
+            alert('Gagal mengirim request: ' + (error.response?.data?.message || error.message));
+            return false;
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Page change - disederhanakan
     const handlePageChange = (newPage) => {
         if (newPage >= 1 && newPage <= totalPages) {
             setCurrentPage(newPage);
             fetchRequests(newPage);
         }
     };
+
+    // Render sort icon - disederhanakan
+    const renderSortIcon = (field) => {
+        if (sortField !== field) return <div className="w-4 h-4" />;
+        return sortDirection === 'asc' ?
+            <ChevronUp className="w-4 h-4" /> :
+            <ChevronDown className="w-4 h-4" />;
+    };
+
+    // Data filtering - disederhanakan
+    const filteredItems = getSortedData(requests);
 
     // Tampilkan loading state
     if (loading && requests.length === 0) {
@@ -392,28 +360,6 @@ const RequestNote = () => {
             </div>
         );
     }
-
-    // Filter data
-    const filteredItems = getSortedData(requests.filter((item) => {
-        const matchesUserId = !advancedFilters.userId ||
-            item.user_id.toString().includes(advancedFilters.userId);
-        const matchesStartDate = !advancedFilters.startDate ||
-            new Date(item.created_at) >= new Date(advancedFilters.startDate);
-        const matchesEndDate = !advancedFilters.endDate ||
-            new Date(item.created_at) <= new Date(advancedFilters.endDate);
-
-        return matchesUserId && matchesStartDate && matchesEndDate;
-    }));
-
-    // Render sort icon
-    const renderSortIcon = (field) => {
-        if (sortField !== field) {
-            return <div className="w-4 h-4"></div>;
-        }
-        return sortDirection === 'asc' ?
-            <ChevronUp className="w-4 h-4" /> :
-            <ChevronDown className="w-4 h-4" />;
-    };
 
     return (
         <div className="space-y-6">
@@ -464,7 +410,6 @@ const RequestNote = () => {
                                 <option value="partially_approved">Partially Approved</option>
                                 <option value="completed">Completed</option>
                             </select>
-
 
                             <button
                                 onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
@@ -718,7 +663,10 @@ const RequestNote = () => {
                                 Detail Request: {selectedRequest.request_number}
                             </h3>
                             <button
-                                onClick={() => setShowDetailModal(false)}
+                                onClick={() => {
+                                    setShowDetailModal(false);
+                                    setSelectedRequest(null);
+                                }}
                                 className="text-gray-400 hover:text-gray-600"
                             >
                                 <X className="w-6 h-6" />
@@ -802,7 +750,7 @@ const RequestNote = () => {
                                                                         : ''
                                                                 }
                                                                 alt={detail.product?.name}
-                                                                className="w-9 h-9 object-cover"
+                                                                className="w-9 h-9 object-cover mr-3"
                                                                 onError={(e) => {
                                                                     console.log('Gambar gagal dimuat:', detail.product?.image_url);
                                                                     e.target.style.display = 'none';
@@ -812,18 +760,19 @@ const RequestNote = () => {
                                                         ) : null}
 
                                                         <div
-                                                            className="w-full h-full flex items-center justify-center"
+                                                            className="w-9 h-9 bg-gray-200 rounded mr-3 flex items-center justify-center"
                                                             style={{ display: detail.product?.image_url ? 'none' : 'flex' }}
                                                         >
-                                                            <Package className="w-5 h-5 text-white" />
+                                                            <Package className="w-5 h-5 text-gray-500" />
                                                         </div>
-                                                        <div className="font-medium">
-                                                            {detail.name || detail.product?.name || `Product ID: ${detail.product_id}`}
-                                                        </div>
-                                                    </div>
-                                                    <div>
-                                                        <div className="text-xs text-gray-500">
-                                                            SKU: {detail.product?.sku || 'N/A'}
+
+                                                        <div>
+                                                            <div className="font-medium">
+                                                                {detail.name || detail.product?.name || `Product ID: ${detail.product_id}`}
+                                                            </div>
+                                                            <div className="text-xs text-gray-500">
+                                                                SKU: {detail.product?.sku || 'N/A'}
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </td>
@@ -849,20 +798,21 @@ const RequestNote = () => {
                         {/* Actions */}
                         <div className="flex justify-end space-x-3">
                             <button
-                                onClick={() => setShowDetailModal(false)}
+                                onClick={() => {
+                                    setShowDetailModal(false);
+                                    setSelectedRequest(null);
+                                }}
                                 className="px-4 py-2 border bg-gray-400 border-gray-300 rounded-lg text-white hover:bg-gray-700"
                             >
                                 Tutup
                             </button>
                             {selectedRequest.status === 'draft' && (
                                 <button
-                                    onClick={() => {
-                                        setShowDetailModal(false);
-                                        handleCancelRequest(selectedRequest.id);
-                                    }}
-                                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                                    onClick={handleSubmitRequestFromDetail}
+                                    disabled={loading}
+                                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
                                 >
-                                    Batalkan Request
+                                    {loading ? 'Mengirim...' : 'Kirim Request'}
                                 </button>
                             )}
                         </div>

@@ -181,13 +181,14 @@ const Login = () => {
             <div className="max-w-md w-full space-y-8">
                 {/* Header */}
                 <div className="text-center">
-                    <div className="mx-auto h-16 w-16 flex items-center justify-center mb-4">
+                    <div className="mx-auto h-42 w-42 flex items-center justify-center mb-4">
                         <img
                             src={SemutImage}
                             alt="Semut Semut"
-                            className="h-20 w-20 object-contain"
+                            className="h-32 w-32 object-contain"
                         />
                     </div>
+
                     <h2 className="text-3xl font-bold text-gray-900">Inventopia</h2>
                     <p className="mt-2 text-lg font-bold text-gray-900">
                         Atur Inventarismu dengan Inventopia!

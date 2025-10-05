@@ -7,13 +7,15 @@ import {
     Archive,
     Search,
     Mail,
+    ListChecks,
     Menu,
     X,
     ChevronLeft,
     ChevronRight,
     LogOut,
     ChevronDown,
-    Home
+    Home,
+    Check
 } from 'lucide-react';
 import SemutImage from "../assets/semut2.png";
 import axios from 'axios';
@@ -69,55 +71,36 @@ const Layout = ({ children }) => {
             const userData = userResponse.data.data || userResponse.data;
             setUser(userData);
 
-            // 2. Get user permissions - gunakan endpoint yang sudah terbukti bekerja
+            // 2. Get user permissions - menggunakan endpoint yang sesuai
             let permissions = [];
 
             try {
-                // Coba endpoint my-permissions yang sudah terbukti bekerja
-                const myPermResponse = await axios.get('http://127.0.0.1:8000/api/my-permissions', {
+                // Coba endpoint yang lebih sederhana
+                const permResponse = await axios.get(`http://127.0.0.1:8000/api/users/${userId}/permissions`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
 
-                console.log('My Permissions Response:', myPermResponse.data);
+                console.log('Permissions API Response:', permResponse.data);
 
-                // Handle different response formats
-                if (myPermResponse.data.permissions && Array.isArray(myPermResponse.data.permissions)) {
-                    permissions = myPermResponse.data.permissions;
-                } else if (myPermResponse.data.data && Array.isArray(myPermResponse.data.data)) {
-                    // Jika response berupa array of objects, extract name property
-                    permissions = myPermResponse.data.data.map(perm =>
+                // Handle response format
+                if (permResponse.data.data && Array.isArray(permResponse.data.data)) {
+                    permissions = permResponse.data.data.map(perm =>
+                        typeof perm === 'string' ? perm : perm.name
+                    );
+                } else if (permResponse.data.permissions && Array.isArray(permResponse.data.permissions)) {
+                    permissions = permResponse.data.permissions;
+                } else if (Array.isArray(permResponse.data)) {
+                    permissions = permResponse.data.map(perm =>
                         typeof perm === 'string' ? perm : perm.name
                     );
                 } else {
-                    console.warn('Unexpected permissions format, using fallback');
+                    console.warn('Unexpected permissions format, using role-based defaults');
                     permissions = getDefaultPermissionsByRole(userData.role);
                 }
 
-            } catch (myPermError) {
-                console.warn('My-permissions failed, trying user-specific endpoint:', myPermError);
-
-                try {
-                    // Fallback ke endpoint user permissions
-                    const userPermResponse = await axios.get(`http://127.0.0.1:8000/api/users/${userId}/permissions`, {
-                        headers: { Authorization: `Bearer ${token}` },
-                    });
-
-                    console.log('User Permissions Response:', userPermResponse.data);
-
-                    if (userPermResponse.data.permissions && Array.isArray(userPermResponse.data.permissions)) {
-                        permissions = userPermResponse.data.permissions;
-                    } else if (userPermResponse.data.data && Array.isArray(userPermResponse.data.data)) {
-                        permissions = userPermResponse.data.data.map(perm =>
-                            typeof perm === 'string' ? perm : perm.name
-                        );
-                    } else {
-                        permissions = getDefaultPermissionsByRole(userData.role);
-                    }
-
-                } catch (userPermError) {
-                    console.warn('All permissions endpoints failed, using default permissions by role');
-                    permissions = getDefaultPermissionsByRole(userData.role);
-                }
+            } catch (permError) {
+                console.warn('Permissions endpoint failed, using role-based defaults:', permError);
+                permissions = getDefaultPermissionsByRole(userData.role);
             }
 
             console.log('Final permissions:', permissions);
@@ -131,7 +114,15 @@ const Layout = ({ children }) => {
                 localStorage.removeItem('user_id');
                 navigate('/');
             } else {
-                setError(err.response?.data?.message || 'Failed to fetch user data');
+                // Jika error karena table not found, gunakan default permissions
+                if (err.response?.data?.message?.includes('table') && err.response?.data?.message?.includes('not found')) {
+                    console.log('Table error detected, using default permissions');
+                    const userData = { role: user?.role || 'User' };
+                    setUserPermissions(getDefaultPermissionsByRole(userData.role));
+                    setError(null);
+                } else {
+                    setError(err.response?.data?.message || 'Failed to fetch user data');
+                }
             }
         } finally {
             setLoading(false);
@@ -142,9 +133,9 @@ const Layout = ({ children }) => {
     const getDefaultPermissionsByRole = (role) => {
         switch (role) {
             case 'Superadmin':
-                return ['view_dashboard', 'view_inventory', 'create_inventory', 'edit_inventory', 'delete_inventory', 'view_stocknote', 'view_users', 'create_users', 'edit_users', 'delete_users', 'view_email_settings', 'edit_email_settings'];
+                return ['view_dashboard', 'view_inventory', 'create_inventory', 'edit_inventory', 'delete_inventory', 'view_stocknote', 'view_approvalnote', 'view_users', 'create_users', 'edit_users', 'delete_users', 'view_email_settings', 'edit_email_settings'];
             case 'Admin':
-                return ['view_dashboard', 'view_inventory', 'create_inventory', 'edit_inventory', 'delete_inventory'];
+                return ['view_dashboard', 'view_inventory', 'create_inventory', 'edit_inventory', 'delete_inventory', 'view_approvalnote'];
             case 'User':
                 return ['view_homeuser', 'view_inventaris', 'create_inventaris', 'view_requestnote'];
             default:
@@ -196,7 +187,7 @@ const Layout = ({ children }) => {
     const getAllNavigationItems = () => [
         // Menu untuk Superadmin dan Admin (Management)
         {
-            name: 'Dashboard',
+            name: 'Beranda',
             href: '/home',
             icon: BarChart3,
             requiredPermissions: ['view_dashboard'],
@@ -229,6 +220,13 @@ const Layout = ({ children }) => {
             icon: Mail,
             requiredPermissions: ['view_email_settings'],
             roles: ['Superadmin']
+        },
+        {
+            name: 'Persetujuan',
+            href: '/approvalnote',
+            icon: ListChecks,
+            requiredPermissions: ['view_approvalnote'],
+            roles: ['Superadmin', 'Admin']
         },
 
         // Menu untuk User (End User)
@@ -344,11 +342,11 @@ const Layout = ({ children }) => {
                     {/* Logo and Brand */}
                     <div className={`h-16 px-4 flex items-center border-b border-green-600 bg-green-600 ${sidebarMin ? 'justify-center' : 'justify-between'}`}>
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 flex items-center justify-center">
+                            <div className="w-15 h-15 flex items-center justify-center">
                                 <img
                                     src={SemutImage}
                                     alt="Semut Semut"
-                                    className="h-8 w-8 object-contain"
+                                    className="h-12 w-12 object-contain"
                                 />
                             </div>
                             {!sidebarMin && (

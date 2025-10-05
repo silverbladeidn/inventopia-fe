@@ -21,39 +21,26 @@ import {
     XCircle,
     Clock,
 } from 'lucide-react';
-import RequestDetailModal from '../components/RequestNote/RequestDetailModal';
-import RequestUpdateModal from '../components/RequestNote/RequestUpdateModal';
-import RequestTable from '../components/RequestNote/RequestTable';
+import RequestTable from '../components/ApprovalNote/RequestTable';
 
-const RequestNote = () => {
+const ApprovalNote = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [filterStatus, setFilterStatus] = useState('all');
     const [requests, setRequests] = useState([]);
+    const [loadingActions, setLoadingActions] = useState({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [requestItems, setRequestItems] = useState({});
     const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [sortField, setSortField] = useState('created_at');
     const [sortDirection, setSortDirection] = useState('desc');
-    const [selectedRequest, setSelectedRequest] = useState(null);
-    const [showDetailModal, setShowDetailModal] = useState(false);
     const [advancedFilters, setAdvancedFilters] = useState({
         userId: '',
         startDate: '',
         endDate: ''
     });
-    const [showUpdateModal, setShowUpdateModal] = useState(false);
-    const [updateId, setUpdateId] = useState(null);
-    const [products, setProducts] = useState([]);
-    const [form, setForm] = useState({
-        product_id: "",
-        quantity: 1,
-        note: ""
-    });
-    const [updatedDetails, setUpdatedDetails] = useState([]);
-    const [updateData, setUpdateData] = useState(null);
+    const currentUser = JSON.parse(localStorage.getItem('user') || 'null');
 
     // Fetch data - disederhanakan
     const fetchRequests = async (page = 1) => {
@@ -74,7 +61,7 @@ const RequestNote = () => {
             if (filterStatus !== 'all') params.status = filterStatus;
             if (searchQuery.trim()) params.search = searchQuery.trim();
 
-            const response = await axios.get(`http://127.0.0.1:8000/api/item-requests`, {
+            const response = await axios.get(`http://127.0.0.1:8000/api/approval-lists`, {
                 params,
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -99,26 +86,6 @@ const RequestNote = () => {
         fetchRequests(1);
     }, [filterStatus, searchQuery]);
 
-    useEffect(() => {
-        const fetchProducts = async () => {
-            try {
-                const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
-                const res = await axios.get("http://127.0.0.1:8000/api/products", {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                if (Array.isArray(res.data)) {
-                    setProducts(res.data);
-                } else if (res.data.data && Array.isArray(res.data.data)) {
-                    setProducts(res.data.data);
-                }
-            } catch (err) {
-                console.error("Gagal fetch products", err);
-            }
-        };
-
-        fetchProducts();
-    }, []);
 
     // Sorting disederhanakan
     const handleSort = (field) => {
@@ -261,234 +228,6 @@ const RequestNote = () => {
         });
     };
 
-    // View details - disederhanakan
-    const handleViewDetails = async (requestId) => {
-        try {
-            const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
-            const response = await axios.get(
-                `http://127.0.0.1:8000/api/item-requests/${requestId}`,
-                { headers: { 'Authorization': `Bearer ${token}` } }
-            );
-
-            if (response.data.success) {
-                setSelectedRequest(response.data.data);
-                setShowDetailModal(true);
-            }
-        } catch (error) {
-            alert('Terjadi kesalahan saat memuat detail request');
-        }
-    };
-
-    // Handle update request - UPDATED
-    const handleUpdateRequest = async (requestId) => {
-        setUpdateId(requestId);
-        setShowUpdateModal(true);
-
-        try {
-            const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
-
-            // Fetch request detail untuk mendapatkan data lengkap
-            const res = await axios.get(`http://127.0.0.1:8000/api/item-requests/${requestId}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-
-            if (res.data.success && res.data.data) {
-                const requestData = res.data.data;
-                setUpdateData(requestData); // Simpan data lengkap request
-
-                // Set form dengan data yang ada
-                setForm({
-                    product_id: "",
-                    quantity: 1,
-                    note: requestData.note || ""
-                });
-
-                // Reset updated details
-                setUpdatedDetails([]);
-            }
-        } catch (err) {
-            console.error("Gagal ambil detail request", err);
-            alert('Gagal mengambil data request');
-        }
-    };
-
-    // Cancel request - disederhanakan
-    const handleCancelRequest = async (requestId) => {
-        if (!confirm('Apakah Anda yakin ingin membatalkan request ini?')) return;
-
-        try {
-            const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
-            const response = await axios.post(
-                `http://127.0.0.1:8000/api/item-requests/${requestId}/cancel`,
-                {},
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
-
-            if (response.data.success) {
-                alert('Request berhasil dibatalkan!');
-                fetchRequests(currentPage);
-            }
-        } catch (error) {
-            alert('Terjadi kesalahan saat membatalkan request');
-        }
-    };
-
-    const handleSubmitUpdate = async (action = 'draft') => {
-        if (!updateData || !updateData.details || updateData.details.length === 0) {
-            alert('Tidak ada item dalam request!');
-            return;
-        }
-
-        // Validasi stok jika submit
-        if (action === 'submit') {
-            const stockIssues = updateData.details.filter(detail => {
-                const product = products.find(p => p.id === detail.product_id);
-                const requestedQty = updatedDetails.find(ud => ud.id === detail.id)?.requested_quantity || detail.requested_quantity;
-                return product && requestedQty > product.stock_quantity;
-            });
-
-            if (stockIssues.length > 0) {
-                alert('Beberapa item melebihi stok yang tersedia. Silakan periksa kembali jumlah yang diminta.');
-                return;
-            }
-        }
-
-        setLoading(true);
-        try {
-            const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
-
-            // Prepare data for API
-            const payload = {
-                note: form.note !== undefined ? form.note : updateData.note,
-                action: action, // 'draft' atau 'submit'
-                details: updateData.details.map(detail => {
-                    // Gunakan quantity yang diupdate jika ada, otherwise gunakan yang lama
-                    const updatedDetail = updatedDetails.find(ud => ud.id === detail.id);
-                    return {
-                        product_id: detail.product_id,
-                        qty: updatedDetail ? updatedDetail.requested_quantity : detail.requested_quantity
-                    };
-                })
-            };
-
-            const response = await axios.put(
-                `http://127.0.0.1:8000/api/item-requests/${updateId}`,
-                payload,
-                {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                }
-            );
-
-            if (response.data.success) {
-                alert(action === 'submit'
-                    ? 'Request berhasil dikirim!'
-                    : 'Draft berhasil disimpan!'
-                );
-
-                // Reset semua state
-                setShowUpdateModal(false);
-                setUpdateId(null);
-                setUpdateData(null);
-                setForm({ product_id: "", quantity: 1, note: "" });
-                setUpdatedDetails([]);
-
-                // Refresh data
-                fetchRequests(currentPage);
-            } else {
-                alert(response.data.message || 'Gagal menyimpan perubahan');
-            }
-        } catch (err) {
-            console.error("Gagal update request", err);
-            alert('Gagal update request: ' + (err.response?.data?.message || err.message));
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleSubmitFromUpdateModal = async () => {
-        if (!updateData || !updateData.details || updateData.details.length === 0) {
-            alert('Tidak ada item dalam request!');
-            return;
-        }
-
-        // Validasi stok
-        const stockIssues = updateData.details.filter(detail => {
-            const product = products.find(p => p.id === detail.product_id);
-            const requestedQty = updatedDetails.find(ud => ud.id === detail.id)?.requested_quantity || detail.requested_quantity;
-            return product && requestedQty > product.stock_quantity;
-        });
-
-        if (stockIssues.length > 0) {
-            alert('Beberapa item melebihi stok yang tersedia. Silakan periksa kembali jumlah yang diminta.');
-            return;
-        }
-
-        setLoading(true);
-        try {
-            const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
-
-            // 1. UPDATE DATA DULU menggunakan PUT
-            const updatePayload = {
-                note: form.note !== undefined ? form.note : updateData.note,
-                action: 'draft', // Simpan dulu sebagai draft
-                details: updateData.details.map(detail => {
-                    const updatedDetail = updatedDetails.find(ud => ud.id === detail.id);
-                    return {
-                        product_id: detail.product_id,
-                        qty: updatedDetail ? updatedDetail.requested_quantity : detail.requested_quantity
-                    };
-                })
-            };
-
-            const updateResponse = await axios.put(
-                `http://127.0.0.1:8000/api/item-requests/${updateId}`,
-                updatePayload,
-                {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                }
-            );
-
-            if (updateResponse.data.success) {
-                // 2. SETELAH UPDATE BERHASIL, SUBMIT menggunakan POST /submit
-                const submitResponse = await axios.post(
-                    `http://127.0.0.1:8000/api/item-requests/${updateId}/submit`,
-                    {},
-                    {
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json'
-                        }
-                    }
-                );
-
-                if (submitResponse.data.success) {
-                    alert('Request berhasil dikirim!');
-
-                    // Reset semua state
-                    setShowUpdateModal(false);
-                    setUpdateId(null);
-                    setUpdateData(null);
-                    setForm({ product_id: "", quantity: 1, note: "" });
-                    setUpdatedDetails([]);
-
-                    // Refresh data
-                    fetchRequests(currentPage);
-                }
-            }
-        } catch (err) {
-            console.error("Gagal update dan submit request", err);
-            alert('Gagal mengirim request: ' + (err.response?.data?.message || err.message));
-        } finally {
-            setLoading(false);
-        }
-    };
-
     // Page change - disederhanakan
     const handlePageChange = (newPage) => {
         if (newPage >= 1 && newPage <= totalPages) {
@@ -508,72 +247,106 @@ const RequestNote = () => {
     // Data filtering - disederhanakan
     const filteredItems = getSortedData(requests);
 
-    // Fungsi untuk handle update quantity
-    const handleUpdateQuantity = (detailId, newQuantity) => {
-        setUpdatedDetails(prev => {
-            const existing = prev.find(d => d.id === detailId);
-            if (existing) {
-                return prev.map(d => d.id === detailId ? { ...d, requested_quantity: newQuantity } : d);
+    // Handler functions untuk approval - DITAMBAHKAN
+    const handleApprove = async (requestId) => {
+        setLoadingActions(prev => ({ ...prev, [requestId]: 'approve' }));
+        try {
+            const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+
+            const response = await axios.post(
+                `http://127.0.0.1:8000/api/item-requests/${requestId}/approve`,
+                {},
+                {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+
+            if (response.data.success) {
+                alert('Request berhasil diapprove!');
+                fetchRequests(currentPage); // Refresh data
             } else {
-                return [...prev, { id: detailId, requested_quantity: newQuantity }];
+                alert('Gagal approve request: ' + response.data.message);
             }
-        });
-    };
-
-    // Fungsi untuk handle remove item
-    const handleRemoveItem = (detailId) => {
-        if (updateData) {
-            setUpdateData(prev => ({
-                ...prev,
-                details: prev.details.filter(d => d.id !== detailId)
-            }));
+        } catch (error) {
+            console.error('Error approving request:', error);
+            alert('Terjadi kesalahan saat approve request');
+        } finally {
+            setLoadingActions(prev => ({ ...prev, [requestId]: null }));
         }
     };
 
-    // Fungsi untuk handle add item
-    const handleAddItemToRequest = () => {
-        if (!form.product_id || form.quantity < 1) {
-            alert('Pilih produk dan jumlah yang valid!');
-            return;
+    const handlePartialApprove = async (requestId) => {
+        try {
+            const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+
+            const response = await axios.post(
+                `http://127.0.0.1:8000/api/item-requests/${requestId}/partial-approve`,
+                {},
+                {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+
+            if (response.data.success) {
+                alert('Request berhasil partially approved!');
+                fetchRequests(currentPage); // Refresh data
+            } else {
+                alert('Gagal partial approve request: ' + response.data.message);
+            }
+        } catch (error) {
+            console.error('Error partial approving request:', error);
+            alert('Terjadi kesalahan saat partial approve request');
         }
+    };
 
-        const selectedProduct = products.find(p => p.id === parseInt(form.product_id));
-        if (!selectedProduct) {
-            alert('Produk tidak ditemukan!');
-            return;
+    const handleReject = async (requestId) => {
+        try {
+            setLoadingActions(prev => ({ ...prev, [requestId]: 'reject' }));
+            const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+
+            // Minta alasan penolakan
+            const note = prompt('Masukkan alasan penolakan:') || 'Request ditolak';
+
+            const response = await axios.post(
+                `http://127.0.0.1:8000/api/item-requests/${requestId}/reject`,
+                {
+                    note: note // Sesuai dengan input('note') di backend
+                },
+                {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    }
+                }
+            );
+
+            if (response.data.success) {
+                alert('Request berhasil ditolak!');
+                fetchRequests(currentPage); // Refresh data
+            } else {
+                alert('Gagal reject request: ' + response.data.message);
+            }
+        } catch (error) {
+            console.error('Error rejecting request:', error);
+
+            // Handle error lebih spesifik
+            if (error.response?.status === 500) {
+                alert('Server error. Silakan coba lagi nanti.');
+            } else if (error.response?.data?.message) {
+                alert('Error: ' + error.response.data.message);
+            } else {
+                alert('Terjadi kesalahan saat menolak request');
+            }
+        } finally {
+            setLoadingActions(prev => ({ ...prev, [requestId]: null }));
         }
-
-        // Cek apakah produk sudah ada di details
-        const isProductExist = updateData?.details?.some(detail =>
-            detail.product_id === parseInt(form.product_id)
-        );
-
-        if (isProductExist) {
-            alert('Produk ini sudah ada dalam request!');
-            return;
-        }
-
-        // Cek stok
-        if (form.quantity > selectedProduct.stock_quantity) {
-            alert(`Stok tidak mencukupi! Stok tersedia: ${selectedProduct.stock_quantity}`);
-            return;
-        }
-
-        const newItem = {
-            id: `new-${Date.now()}`, // temporary ID for new items
-            product_id: parseInt(form.product_id),
-            requested_quantity: form.quantity,
-            product: selectedProduct,
-            status: 'draft'
-        };
-
-        setUpdateData(prev => ({
-            ...prev,
-            details: [...prev.details, newItem]
-        }));
-
-        // Reset form
-        setForm({ product_id: "", quantity: 1, note: form.note });
     };
 
     // Tampilkan loading state
@@ -608,8 +381,8 @@ const RequestNote = () => {
             {/* Header */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900">Riwayat Permintaan</h1>
-                    <p className="text-gray-600 mt-1">Merekam segala permintaan yang dilakukan oleh pengguna</p>
+                    <h1 className="text-3xl font-bold text-gray-900">Persetujuan</h1>
+                    <p className="text-gray-600 mt-1">Memberikan tanggapan segala permintaan dari pengguna</p>
                 </div>
 
                 <button
@@ -645,7 +418,6 @@ const RequestNote = () => {
                                 className="px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
                             >
                                 <option value="all">Semua Status</option>
-                                <option value="draft">Draft</option>
                                 <option value="pending">Pending</option>
                                 <option value="approved">Approved</option>
                                 <option value="rejected">Rejected</option>
@@ -732,9 +504,6 @@ const RequestNote = () => {
             {/* Requests Table */}
             <RequestTable
                 requests={filteredItems}
-                onViewDetails={handleViewDetails}
-                onUpdateRequest={handleUpdateRequest}
-                onCancelRequest={handleCancelRequest}
                 onSort={handleSort}
                 sortField={sortField}
                 sortDirection={sortDirection}
@@ -742,6 +511,10 @@ const RequestNote = () => {
                 getStatusColor={getStatusColor}
                 formatDate={formatDate}
                 renderSortIcon={renderSortIcon}
+                user={currentUser}
+                onApprove={handleApprove}
+                onPartialApprove={handlePartialApprove}
+                onReject={handleReject}
             />
 
             {/* Pagination */}
@@ -773,47 +546,8 @@ const RequestNote = () => {
                     </div>
                 </div>
             </div>
-
-            <RequestDetailModal
-                show={showDetailModal}
-                selectedRequest={selectedRequest}
-                onClose={() => {
-                    setShowDetailModal(false);
-                    setSelectedRequest(null);
-                }}
-                loading={loading}
-                getStatusIcon={getStatusIcon}
-                getStatusColor={getStatusColor}
-                formatDate={formatDate}
-            />
-
-            <RequestUpdateModal
-                show={showUpdateModal}
-                updateData={updateData}
-                onClose={() => {
-                    setShowUpdateModal(false);
-                    setUpdateId(null);
-                    setUpdateData(null);
-                    setForm({ product_id: "", quantity: 1, note: "" });
-                    setUpdatedDetails([]);
-                }}
-                loading={loading}
-                getStatusIcon={getStatusIcon}
-                getStatusColor={getStatusColor}
-                formatDate={formatDate}
-                products={products}
-                form={form}
-                updatedDetails={updatedDetails}
-                setForm={setForm}
-                setUpdatedDetails={setUpdatedDetails}
-                handleUpdateQuantity={handleUpdateQuantity}
-                handleRemoveItem={handleRemoveItem}
-                handleAddItemToRequest={handleAddItemToRequest}
-                handleSubmitUpdate={handleSubmitUpdate}
-                handleSubmitFromUpdateModal={handleSubmitFromUpdateModal}
-            />
         </div>
     );
 };
 
-export default RequestNote;
+export default ApprovalNote;

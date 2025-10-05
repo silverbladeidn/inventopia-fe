@@ -19,7 +19,6 @@ const UpdateUser = () => {
 
     const [formData, setFormData] = useState({
         name: '',
-        username: '',
         email: '',
         password: '',
         role: '',
@@ -72,7 +71,6 @@ const UpdateUser = () => {
                 // Set form data dengan data lama
                 setFormData({
                     name: userData.name || '',
-                    username: userData.username || '',
                     email: userData.email || '',
                     password: '', // Password dikosongkan untuk keamanan
                     role: userData.role_id || userData.role || ''
@@ -163,11 +161,6 @@ const UpdateUser = () => {
         const newErrors = {};
 
         if (!formData.name.trim()) newErrors.name = 'Nama lengkap harus diisi';
-        if (!formData.username.trim()) {
-            newErrors.username = 'Username harus diisi';
-        } else if (formData.username.length < 3) {
-            newErrors.username = 'Username minimal 3 karakter';
-        }
         if (!formData.email.trim()) {
             newErrors.email = 'Email harus diisi';
         } else if (!/\S+@\S+\.\S+$/.test(formData.email)) {
@@ -197,7 +190,6 @@ const UpdateUser = () => {
             // Siapkan payload - hanya kirim password jika diisi
             const payload = {
                 name: formData.name,
-                username: formData.username,
                 email: formData.email,
                 role: formData.role,
                 permissions: selectedPerms
@@ -381,24 +373,6 @@ const UpdateUser = () => {
                                     placeholder="Masukkan nama lengkap"
                                 />
                                 {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
-                            </div>
-
-                            {/* Username */}
-                            <div>
-                                <label className="block text-sm font-medium mb-2">
-                                    Username <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    name="username"
-                                    value={formData.username}
-                                    onChange={handleInputChange}
-                                    className={`w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 ${errors.username ? 'border-red-300 focus:ring-red-500'
-                                        : 'border-gray-300 focus:ring-green-500'
-                                        }`}
-                                    placeholder="Masukkan username"
-                                />
-                                {errors.username && <p className="mt-1 text-sm text-red-600">{errors.username}</p>}
                             </div>
 
                             {/* Email */}

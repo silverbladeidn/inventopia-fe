@@ -13,6 +13,7 @@ const Inventaris = () => {
     const [sortDirection, setSortDirection] = useState("asc");
     const [requestItems, setRequestItems] = useState({});
     const [showNoteSection, setShowNoteSection] = useState(false);
+    const [userRequests, setUserRequests] = useState([]);
     const [loadingAction, setLoadingAction] = useState(null);
     const [requestNote, setRequestNote] = useState("");
     const [advancedFilters, setAdvancedFilters] = useState({

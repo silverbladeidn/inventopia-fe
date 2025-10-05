@@ -16,7 +16,7 @@ import StockNote from './pages/StockNote';
 import RequestNote from './pages/RequestNote';
 import Users from './pages/User';
 import EmailChange from './pages/EmailChange';
-import Settings from './pages/Settings';
+import ApprovalNote from './pages/ApprovalNote';
 
 function App() {
   return (
@@ -34,6 +34,7 @@ function App() {
         <Route path="/inventory/edit/:id/stock" element={<Layout><EditStockInventory /></Layout>} />
         <Route path="/stocknote" element={<Layout><StockNote /></Layout>} />
         <Route path="/requestnote" element={<Layout><RequestNote /></Layout>} />
+        <Route path="/approvalnote" element={<Layout><ApprovalNote /></Layout>} />
         <Route path="/users" element={<Layout><Users /></Layout>} />
         <Route path="/users/add" element={<Layout><AddUser /></Layout>} />
         <Route path="/users/edit/:id" element={<Layout><EditUser /></Layout>} />
